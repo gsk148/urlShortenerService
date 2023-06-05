@@ -17,12 +17,12 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func addShortOrGetLargeUrl(w http.ResponseWriter, r *http.Request) {
+func addShortOrGetLargeURL(w http.ResponseWriter, r *http.Request) {
 
-	parsedUrl := r.URL
-	if parsedUrl.Path != "" && r.Method == http.MethodGet {
+	parsedURL := r.URL
+	if parsedURL.Path != "" && r.Method == http.MethodGet {
 
-		url := parsedUrl.Path[1:]
+		url := parsedURL.Path[1:]
 		if urlsMap[url] == "" {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -72,7 +72,7 @@ func createRandomStringFromInput(url string) string {
 
 func main() {
 	mux := http.NewServeMux()
-	mux.HandleFunc(`/`, addShortOrGetLargeUrl)
+	mux.HandleFunc(`/`, addShortOrGetLargeURL)
 	err := http.ListenAndServe(`:8080`, mux)
 	if err != nil {
 		panic(err)
