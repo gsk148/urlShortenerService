@@ -2,7 +2,6 @@ package main
 
 import (
 	"io"
-	"log"
 	"math/rand"
 	"net/http"
 	"time"
@@ -18,7 +17,6 @@ func init() {
 }
 
 func addShortOrGetLargeURL(w http.ResponseWriter, r *http.Request) {
-
 	parsedURL := r.URL
 	if parsedURL.Path != "" && r.Method == http.MethodGet {
 
@@ -34,14 +32,19 @@ func addShortOrGetLargeURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		w.Write([]byte("Allowed only POST method"))
+		http.Error(w, "Not supported", http.StatusBadRequest)
 		return
 	}
 
 	requestData, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Fatal(err)
+		http.Error(w, "Reading requestData failed", http.StatusBadRequest)
+		return
+	}
+
+	if len(requestData) == 0 {
+		http.Error(w, "Empty request body", http.StatusBadRequest)
+		return
 	}
 
 	inputString := string(requestData)
