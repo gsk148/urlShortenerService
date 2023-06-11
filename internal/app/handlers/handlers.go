@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/gsk148/urlShorteningService/internal/app/config"
 	"github.com/gsk148/urlShorteningService/internal/app/utils/hasher"
 	"io"
 	"net/http"
@@ -35,7 +34,7 @@ func CreateShortLinkHandler(w http.ResponseWriter, r *http.Request) {
 	urlsMap[encoded] = string(body)
 	w.Header().Set("content-type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
-	url := scheme + "://" + config.GetFinAddr() + "/" + encoded
+	url := scheme + "://" + r.Host + "/" + encoded
 	w.Write([]byte(url))
 }
 
