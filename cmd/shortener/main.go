@@ -1,14 +1,16 @@
 package main
 
 import (
+	"github.com/go-chi/chi/v5"
 	"github.com/gsk148/urlShorteningService/internal/app/handlers"
 	"net/http"
 )
 
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc(`/`, handlers.GeneralHandler)
-	err := http.ListenAndServe(`:8080`, mux)
+	r := chi.NewRouter()
+	r.Post(`/`, handlers.CreateShortLinkHandler)
+	r.Get(`/{id}`, handlers.FindByShortLinkHandler)
+	err := http.ListenAndServe(`:8080`, r)
 	if err != nil {
 		panic(err)
 	}
