@@ -21,11 +21,6 @@ func CreateShortLinkHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	scheme := "http"
-	if r.TLS != nil {
-		scheme = "https"
-	}
-
 	if len(body) == 0 {
 		http.Error(w, "Empty request body", http.StatusBadRequest)
 		return
@@ -35,7 +30,7 @@ func CreateShortLinkHandler(w http.ResponseWriter, r *http.Request) {
 	urlsMap[encoded] = string(body)
 	w.Header().Set("content-type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
-	url := scheme + "://" + config.GetFinAddr() + "/" + encoded
+	url := config.GetBaseUrl() + "/" + encoded
 	w.Write([]byte(url))
 }
 
