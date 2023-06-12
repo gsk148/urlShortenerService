@@ -30,7 +30,7 @@ func CreateShortLinkHandler(w http.ResponseWriter, r *http.Request) {
 	urlsMap[encoded] = string(body)
 	w.Header().Set("content-type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
-	url := config.GetBaseUrl() + "/" + encoded
+	url := config.GetBaseURL() + "/" + encoded
 	w.Write([]byte(url))
 }
 

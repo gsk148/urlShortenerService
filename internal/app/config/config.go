@@ -65,7 +65,7 @@ func ParseAddresses() {
 	os.Setenv("BASE_URL", finalAddr.String())
 }
 
-func GetBaseUrl() string {
+func GetBaseURL() string {
 	return "http://" + os.Getenv("BASE_URL")
 }
 
