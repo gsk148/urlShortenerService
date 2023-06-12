@@ -1,10 +1,12 @@
 package main
 
 import (
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
+
 	"github.com/gsk148/urlShorteningService/internal/app/config"
 	"github.com/gsk148/urlShorteningService/internal/app/handlers"
-	"net/http"
 )
 
 func init() {

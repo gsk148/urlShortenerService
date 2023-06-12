@@ -1,13 +1,15 @@
 package handlers
 
 import (
-	"github.com/gsk148/urlShorteningService/internal/app/config"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/gsk148/urlShorteningService/internal/app/config"
 )
 
 func TestMain(m *testing.M) {

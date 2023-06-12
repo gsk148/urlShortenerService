@@ -1,11 +1,13 @@
 package handlers
 
 import (
-	"github.com/go-chi/chi/v5"
-	"github.com/gsk148/urlShorteningService/internal/app/config"
-	"github.com/gsk148/urlShorteningService/internal/app/utils/hasher"
 	"io"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
+
+	"github.com/gsk148/urlShorteningService/internal/app/config"
+	"github.com/gsk148/urlShorteningService/internal/app/utils/hasher"
 )
 
 var urlsMap = make(map[string]string)
