@@ -1,12 +1,20 @@
 package handlers
 
 import (
+	"github.com/gsk148/urlShorteningService/internal/app/config"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 )
+
+func TestMain(m *testing.M) {
+	config.ParseAddresses()
+	code := m.Run()
+	os.Exit(code)
+}
 
 func TestCreateShortLinkHandler(t *testing.T) {
 	type want struct {
