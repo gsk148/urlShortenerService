@@ -9,11 +9,8 @@ import (
 	"github.com/gsk148/urlShorteningService/internal/app/handlers"
 )
 
-func init() {
-	config.ParseAddresses()
-}
-
 func main() {
+	config.ParseAddresses()
 	r := chi.NewRouter()
 	r.Post(`/`, handlers.CreateShortLinkHandler)
 	r.Get(`/{id}`, handlers.FindByShortLinkHandler)
