@@ -3,20 +3,13 @@ package handlers
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/gsk148/urlShorteningService/internal/app/config"
+	"github.com/gsk148/urlShorteningService/internal/app/storage"
 )
-
-func TestMain(m *testing.M) {
-	config.ParseAddresses()
-	code := m.Run()
-	os.Exit(code)
-}
 
 func TestCreateShortLinkHandler(t *testing.T) {
 	type want struct {
@@ -50,12 +43,18 @@ func TestCreateShortLinkHandler(t *testing.T) {
 			},
 		},
 	}
+
+	h := &Handler{
+		ShortURLAddr: "http://localhost:8080",
+		Store:        *storage.NewInMemoryStorage(),
+	}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			request := httptest.NewRequest(test.requestMethod, test.requestPath, strings.NewReader("https://practicum.yandex.ru/"))
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
-			CreateShortLinkHandler(w, request)
+			h.ShortenerHandler(w, request)
 
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
@@ -97,12 +96,18 @@ func TestFindByShortLinkHandler(t *testing.T) {
 			},
 		},
 	}
+
+	h := &Handler{
+		ShortURLAddr: "http://localhost:8080",
+		Store:        *storage.NewInMemoryStorage(),
+	}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			request := httptest.NewRequest(test.requestMethod, test.requestPath, nil)
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
-			FindByShortLinkHandler(w, request)
+			h.FindByShortLinkHandler(w, request)
 
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)

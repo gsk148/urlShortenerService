@@ -6,13 +6,16 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/gsk148/urlShorteningService/internal/app/config"
+	"github.com/gsk148/urlShorteningService/internal/app/storage"
 	"github.com/gsk148/urlShorteningService/internal/app/utils/hasher"
 )
 
-var urlsMap = make(map[string]string)
+type Handler struct {
+	ShortURLAddr string
+	Store        storage.InMemoryStorage
+}
 
-func CreateShortLinkHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Not supported", http.StatusBadRequest)
 		return
@@ -29,14 +32,17 @@ func CreateShortLinkHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	encoded := hasher.CreateHash()
-	urlsMap[encoded] = string(body)
+	err = h.Store.Store(encoded, string(body))
+	if err != nil {
+		return
+	}
 	w.Header().Set("content-type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
-	url := config.GetBaseURL() + "/" + encoded
+	url := h.ShortURLAddr + "/" + encoded
 	w.Write([]byte(url))
 }
 
-func FindByShortLinkHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) FindByShortLinkHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Not supported", http.StatusBadRequest)
 		return
@@ -46,12 +52,11 @@ func FindByShortLinkHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
-	if _, ok := urlsMap[shortLink]; ok {
-		w.Header().Set("Location", urlsMap[shortLink])
-		w.WriteHeader(http.StatusTemporaryRedirect)
-		return
-	} else {
-		http.Error(w, "Short url not found", http.StatusBadRequest)
+	url, err := h.Store.Get(shortLink)
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
+	w.Header().Set("Location", url)
+	w.WriteHeader(http.StatusTemporaryRedirect)
 }

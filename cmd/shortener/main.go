@@ -7,14 +7,21 @@ import (
 
 	"github.com/gsk148/urlShorteningService/internal/app/config"
 	"github.com/gsk148/urlShorteningService/internal/app/handlers"
+	"github.com/gsk148/urlShorteningService/internal/app/storage"
 )
 
 func main() {
-	config.ParseAddresses()
+	cfg := config.Load()
+	store := storage.NewInMemoryStorage()
+
+	h := &handlers.Handler{
+		ShortURLAddr: cfg.ShortURLAddr,
+		Store:        *store,
+	}
 	r := chi.NewRouter()
-	r.Post(`/`, handlers.CreateShortLinkHandler)
-	r.Get(`/{id}`, handlers.FindByShortLinkHandler)
-	err := http.ListenAndServe(config.GetSrvAddr(), r)
+	r.Post(`/`, h.ShortenerHandler)
+	r.Get(`/{id}`, h.FindByShortLinkHandler)
+	err := http.ListenAndServe(cfg.ServerAddr, r)
 	if err != nil {
 		panic(err)
 	}
