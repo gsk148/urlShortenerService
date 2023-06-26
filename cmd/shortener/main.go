@@ -7,6 +7,7 @@ import (
 
 	"github.com/gsk148/urlShorteningService/internal/app/config"
 	"github.com/gsk148/urlShorteningService/internal/app/handlers"
+	"github.com/gsk148/urlShorteningService/internal/app/logger"
 	"github.com/gsk148/urlShorteningService/internal/app/storage"
 )
 
@@ -18,9 +19,10 @@ func main() {
 		ShortURLAddr: cfg.ShortURLAddr,
 		Store:        *store,
 	}
+	logger.NewLogger()
 	r := chi.NewRouter()
-	r.Post(`/`, h.ShortenerHandler)
-	r.Get(`/{id}`, h.FindByShortLinkHandler)
+	r.Post(`/`, logger.WithLogging(http.HandlerFunc(h.ShortenerHandler)))
+	r.Get(`/{id}`, logger.WithLogging(http.HandlerFunc(h.FindByShortLinkHandler)))
 	err := http.ListenAndServe(cfg.ServerAddr, r)
 	if err != nil {
 		panic(err)
