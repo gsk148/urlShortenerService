@@ -90,7 +90,7 @@ func (h *Handler) ShortenerApiHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	encoded := hasher.CreateHash()
-	err = h.Store.Store(encoded, string(body))
+	err = h.Store.Store(encoded, request.URL)
 	if err != nil {
 		return
 	}
