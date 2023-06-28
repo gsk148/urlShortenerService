@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -108,6 +110,66 @@ func TestFindByShortLinkHandler(t *testing.T) {
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
 			h.FindByShortLinkHandler(w, request)
+
+			res := w.Result()
+			assert.Equal(t, test.want.code, res.StatusCode)
+			assert.Equal(t, test.want.contentType, res.Header.Get("content-type"))
+			defer res.Body.Close()
+		})
+	}
+}
+
+func TestShorterApiHandler(t *testing.T) {
+	type want struct {
+		code        int
+		response    string
+		contentType string
+	}
+
+	tests := []struct {
+		name          string
+		requestMethod string
+		requestPath   string
+		contentType   string
+		body          map[string]string
+		want          want
+	}{
+		{
+			name:          "api short link success test",
+			requestMethod: http.MethodPost,
+			requestPath:   "/api/shorten",
+			contentType:   "application/json",
+			body:          map[string]string{"url": "https://practicum.yandex.ru"},
+			want: want{
+				code:        201,
+				contentType: "application/json",
+			},
+		},
+		{
+			name:          "api short link not valid content-type",
+			requestMethod: http.MethodPost,
+			requestPath:   "/api/shorten",
+			contentType:   "text/plain",
+			body:          map[string]string{"url": "https://practicum.yandex.ru"},
+			want: want{
+				code:        400,
+				contentType: "text/plain; charset=utf-8",
+			},
+		},
+	}
+
+	h := &Handler{
+		ShortURLAddr: "http://localhost:8080",
+		Store:        *storage.NewInMemoryStorage(),
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			body, _ := json.Marshal(test.body)
+			request := httptest.NewRequest(test.requestMethod, test.requestPath, bytes.NewBuffer(body))
+			request.Header.Set("Content-Type", test.contentType)
+			w := httptest.NewRecorder()
+			h.ShortenerApiHandler(w, request)
 
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)

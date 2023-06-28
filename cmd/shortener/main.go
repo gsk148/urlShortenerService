@@ -22,6 +22,7 @@ func main() {
 	logger.NewLogger()
 	r := chi.NewRouter()
 	r.Post(`/`, logger.WithLogging(http.HandlerFunc(h.ShortenerHandler)))
+	r.Post(`/api/shorten`, logger.WithLogging(http.HandlerFunc(h.ShortenerApiHandler)))
 	r.Get(`/{id}`, logger.WithLogging(http.HandlerFunc(h.FindByShortLinkHandler)))
 	err := http.ListenAndServe(cfg.ServerAddr, r)
 	if err != nil {
