@@ -64,7 +64,7 @@ func (h *Handler) FindByShortLinkHandler(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-func (h *Handler) ShortenerApiHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 	var request api.ShortenRequest
 	var response api.ShortenResponse
 

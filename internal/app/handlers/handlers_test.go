@@ -169,7 +169,7 @@ func TestShorterApiHandler(t *testing.T) {
 			request := httptest.NewRequest(test.requestMethod, test.requestPath, bytes.NewBuffer(body))
 			request.Header.Set("Content-Type", test.contentType)
 			w := httptest.NewRecorder()
-			h.ShortenerApiHandler(w, request)
+			h.ShortenerAPIHandler(w, request)
 
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
