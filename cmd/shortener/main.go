@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/gsk148/urlShorteningService/internal/app/comperess"
 	"github.com/gsk148/urlShorteningService/internal/app/config"
 	"github.com/gsk148/urlShorteningService/internal/app/handlers"
 	"github.com/gsk148/urlShorteningService/internal/app/logger"
@@ -22,8 +23,8 @@ func main() {
 	logger.NewLogger()
 	r := chi.NewRouter()
 	r.Post(`/`, logger.WithLogging(http.HandlerFunc(h.ShortenerHandler)))
-	r.Post(`/api/shorten`, logger.WithLogging(http.HandlerFunc(h.ShortenerAPIHandler)))
-	r.Get(`/{id}`, logger.WithLogging(http.HandlerFunc(h.FindByShortLinkHandler)))
+	r.Post(`/api/shorten`, comperess.CompressGzip(logger.WithLogging(http.HandlerFunc(h.ShortenerAPIHandler))))
+	r.Get(`/{id}`, comperess.CompressGzip(logger.WithLogging(http.HandlerFunc(h.FindByShortLinkHandler))))
 	err := http.ListenAndServe(cfg.ServerAddr, r)
 	if err != nil {
 		panic(err)
