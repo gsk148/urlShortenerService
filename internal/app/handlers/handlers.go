@@ -51,10 +51,6 @@ func (h *Handler) FindByShortLinkHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	shortLink := chi.URLParam(r, "id")
-	if len(shortLink) < 2 {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
-	}
 	url, err := h.Store.Get(shortLink)
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)

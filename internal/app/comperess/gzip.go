@@ -7,6 +7,17 @@ import (
 	"strings"
 )
 
+var compressingTypes = []string{
+	`application/javascript`,
+	`application/json`,
+	`text/css`,
+	`text/html`,
+	`text/plain`,
+	`text/xml`,
+}
+
+var supportedTypesMap = make(map[string]bool)
+
 type gzipWriter struct {
 	http.ResponseWriter
 	Writer io.Writer
@@ -20,7 +31,8 @@ func (w gzipWriter) Write(b []byte) (int, error) {
 func CompressGzip(next http.Handler) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+		contentType := r.Header.Get("Accept-Encoding")
+		if !strings.Contains(contentType, "gzip") && isNeedCompress(contentType) {
 			// если gzip не поддерживается, передаём управление
 			// дальше без изменений
 			next.ServeHTTP(w, r)
@@ -37,4 +49,12 @@ func CompressGzip(next http.Handler) http.HandlerFunc {
 		w.Header().Set("Content-Encoding", "gzip")
 		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
 	}
+}
+
+func isNeedCompress(contentType string) bool {
+	for _, data := range compressingTypes {
+		supportedTypesMap[data] = true
+	}
+
+	return supportedTypesMap[contentType]
 }
