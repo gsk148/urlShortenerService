@@ -60,6 +60,7 @@ func (h *Handler) FindByShortLinkHandler(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
+	w.Header().Set("content-type", "text/plain")
 	w.Header().Set("Location", url)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
@@ -85,7 +86,7 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = json.Unmarshal(body, &request)
 	if err != nil {
-		http.Error(w, "Unmarshaling request failed", http.StatusBadRequest)
+		http.Error(w, "Unmarshalling request failed", http.StatusBadRequest)
 		return
 	}
 
