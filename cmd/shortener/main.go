@@ -24,7 +24,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Post(`/`, comperess.CompressGzip(logger.WithLogging(http.HandlerFunc(h.ShortenerHandler))))
 	r.Post(`/api/shorten`, comperess.CompressGzip(logger.WithLogging(http.HandlerFunc(h.ShortenerAPIHandler))))
-	r.Get(`/{id}`, comperess.CompressGzip(logger.WithLogging(http.HandlerFunc(h.FindByShortLinkHandler))))
+	r.Get(`/{id}`, logger.WithLogging(http.HandlerFunc(h.FindByShortLinkHandler)))
 	err := http.ListenAndServe(cfg.ServerAddr, r)
 	if err != nil {
 		panic(err)
