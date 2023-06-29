@@ -56,5 +56,6 @@ func isNeedCompress(contentType string) bool {
 		supportedTypesMap[data] = true
 	}
 
+	// проверка наличия поддерживаемого типа
 	return supportedTypesMap[contentType]
 }
