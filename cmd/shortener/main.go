@@ -15,7 +15,7 @@ import (
 
 func main() {
 	cfg := config.Load()
-	store := storage.NewInMemoryStorage()
+	store := storage.NewInMemoryStorage(cfg.FileStoragePath)
 
 	h := &handlers.Handler{
 		ShortURLAddr: cfg.ShortURLAddr,

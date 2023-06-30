@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -46,9 +47,12 @@ func TestCreateShortLinkHandler(t *testing.T) {
 		},
 	}
 
+	fileName := "short-url-db.json"
+	defer os.Remove(fileName)
+
 	h := &Handler{
 		ShortURLAddr: "http://localhost:8080",
-		Store:        *storage.NewInMemoryStorage(),
+		Store:        *storage.NewInMemoryStorage(fileName),
 	}
 
 	for _, test := range tests {
@@ -99,9 +103,12 @@ func TestFindByShortLinkHandler(t *testing.T) {
 		},
 	}
 
+	fileName := "short-url-db.json"
+	defer os.Remove(fileName)
+
 	h := &Handler{
 		ShortURLAddr: "http://localhost:8080",
-		Store:        *storage.NewInMemoryStorage(),
+		Store:        *storage.NewInMemoryStorage(fileName),
 	}
 
 	for _, test := range tests {
@@ -157,10 +164,12 @@ func TestShorterApiHandler(t *testing.T) {
 			},
 		},
 	}
+	fileName := "short-url-db.json"
+	defer os.Remove(fileName)
 
 	h := &Handler{
 		ShortURLAddr: "http://localhost:8080",
-		Store:        *storage.NewInMemoryStorage(),
+		Store:        *storage.NewInMemoryStorage(fileName),
 	}
 
 	for _, test := range tests {
