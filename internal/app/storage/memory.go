@@ -7,24 +7,24 @@ import (
 
 type InMemoryStorage struct {
 	data            map[string]string
-	FileStoragePath string
+	fileStoragePath string
 }
 
 func NewInMemoryStorage(fileStoragePath string) *InMemoryStorage {
 	return &InMemoryStorage{
 		data:            make(map[string]string),
-		FileStoragePath: fileStoragePath,
+		fileStoragePath: fileStoragePath,
 	}
 }
 
 func (s *InMemoryStorage) Store(key string, value string) error {
 	s.data[key] = value
 
-	if s.FileStoragePath == "" {
+	if s.fileStoragePath == "" {
 		return nil
 	}
 
-	err := SaveShortURLToStorage(key, value, s.FileStoragePath)
+	err := SaveShortURLToStorage(key, value, s.fileStoragePath)
 	if err != nil {
 		log.Println("failed to save short url to storage")
 	}

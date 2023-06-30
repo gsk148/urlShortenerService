@@ -38,42 +38,6 @@ func (p *Producer) Close() error {
 	return p.file.Close()
 }
 
-//type Consumer struct {
-//	file    *os.File
-//	decoder *json.Decoder
-//}
-
-//func NewConsumer(fileName string) (*Consumer, error) {
-//	file, err := os.OpenFile(fileName, os.O_RDONLY|os.O_CREATE, 0666)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	return &Consumer{
-//		file:    file,
-//		decoder: json.NewDecoder(file),
-//	}, nil
-//}
-//
-//func (c *Consumer) ReadEventFromFile() (*Event, error) {
-//	event := &Event{}
-//
-//	if err := c.decoder.Decode(&event); err != nil {
-//		return nil, err
-//	}
-//
-//	return event, nil
-//}
-//
-//func (c *Consumer) ReadEvent() (*Event, error) {
-//	event := &Event{}
-//	if err := c.decoder.Decode(&event); err != nil {
-//		return nil, err
-//	}
-//
-//	return event, nil
-//}
-
 func (p *Producer) SaveToFileStorage(shortURL, originalURL string) error {
 	event := Event{
 		UUID:        uuid.NewString(),
