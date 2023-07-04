@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -45,6 +46,6 @@ func main() {
 
 	err := http.ListenAndServe(cfg.ServerAddr, r)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }

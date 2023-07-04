@@ -44,9 +44,6 @@ func (p *Producer) SaveToFileStorage(shortURL, originalURL string) error {
 		ShortURL:    shortURL,
 		OriginalURL: originalURL,
 	}
-	err := p.WriteEvent(&event)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return p.WriteEvent(&event)
 }

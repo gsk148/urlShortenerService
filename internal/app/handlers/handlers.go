@@ -62,14 +62,6 @@ func (h *Handler) FindByShortLinkHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
-	var request api.ShortenRequest
-	var response api.ShortenResponse
-
-	if r.Method != http.MethodPost {
-		http.Error(w, "Not supported", http.StatusBadRequest)
-		return
-	}
-
 	if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		http.Error(w, "Not valid content type", http.StatusBadRequest)
 	}
@@ -80,6 +72,7 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var request api.ShortenRequest
 	err = json.Unmarshal(body, &request)
 	if err != nil {
 		http.Error(w, "Unmarshalling request failed", http.StatusBadRequest)
@@ -91,6 +84,8 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+
+	var response api.ShortenResponse
 	response.Result = h.ShortURLAddr + "/" + encoded
 	result, err := json.Marshal(response)
 	if err != nil {

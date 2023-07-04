@@ -2,7 +2,6 @@ package storage
 
 import (
 	"errors"
-	"log"
 )
 
 type InMemoryStorage struct {
@@ -26,7 +25,7 @@ func (s *InMemoryStorage) Store(key string, value string) error {
 
 	err := SaveShortURLToStorage(key, value, s.fileStoragePath)
 	if err != nil {
-		log.Println("failed to save short url to storage")
+		return errors.New("failed to save short url to storage")
 	}
 
 	return nil
