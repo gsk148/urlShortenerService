@@ -16,6 +16,7 @@ import (
 type Handler struct {
 	ShortURLAddr string
 	Store        storage.InMemoryStorage
+	Producer     storage.Producer
 }
 
 func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
@@ -35,14 +36,12 @@ func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	encoded := hasher.CreateHash()
-	err = h.Store.Store(encoded, string(body))
-	if err != nil {
-		return
-	}
+	h.Store.Store(encoded, string(body))
 	w.Header().Set("content-type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	url := h.ShortURLAddr + "/" + encoded
 	w.Write([]byte(url))
+	h.Producer.SaveToFileStorage(encoded, string(body))
 }
 
 func (h *Handler) FindByShortLinkHandler(w http.ResponseWriter, r *http.Request) {
@@ -80,10 +79,7 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	encoded := hasher.CreateHash()
-	err = h.Store.Store(encoded, request.URL)
-	if err != nil {
-		return
-	}
+	h.Store.Store(encoded, request.URL)
 
 	var response api.ShortenResponse
 	response.Result = h.ShortURLAddr + "/" + encoded
@@ -96,4 +92,5 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 
 	w.Write(result)
+	h.Producer.SaveToFileStorage(encoded, request.URL)
 }

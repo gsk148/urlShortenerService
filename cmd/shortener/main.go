@@ -16,11 +16,18 @@ import (
 
 func main() {
 	cfg := config.Load()
-	store := storage.NewInMemoryStorage(cfg.FileStoragePath)
+	producer, err := storage.NewProducer(cfg.FileStoragePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer producer.Close()
+
+	store := storage.NewInMemoryStorage()
 
 	h := &handlers.Handler{
 		ShortURLAddr: cfg.ShortURLAddr,
 		Store:        *store,
+		Producer:     *producer,
 	}
 
 	logger.NewLogger()
@@ -44,7 +51,7 @@ func main() {
 	r.Post("/", h.ShortenerHandler)
 	r.Get("/{id}", h.FindByShortLinkHandler)
 
-	err := http.ListenAndServe(cfg.ServerAddr, r)
+	err = http.ListenAndServe(cfg.ServerAddr, r)
 	if err != nil {
 		log.Fatal(err)
 	}

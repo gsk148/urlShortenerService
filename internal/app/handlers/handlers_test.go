@@ -48,11 +48,13 @@ func TestCreateShortLinkHandler(t *testing.T) {
 	}
 
 	fileName := "short-url-db.json"
+	producer, _ := storage.NewProducer(fileName)
 	defer os.Remove(fileName)
 
 	h := &Handler{
 		ShortURLAddr: "http://localhost:8080",
-		Store:        *storage.NewInMemoryStorage(fileName),
+		Store:        *storage.NewInMemoryStorage(),
+		Producer:     *producer,
 	}
 
 	for _, test := range tests {
@@ -104,11 +106,13 @@ func TestFindByShortLinkHandler(t *testing.T) {
 	}
 
 	fileName := "short-url-db.json"
+	producer, _ := storage.NewProducer(fileName)
 	defer os.Remove(fileName)
 
 	h := &Handler{
 		ShortURLAddr: "http://localhost:8080",
-		Store:        *storage.NewInMemoryStorage(fileName),
+		Store:        *storage.NewInMemoryStorage(),
+		Producer:     *producer,
 	}
 
 	for _, test := range tests {
@@ -167,9 +171,12 @@ func TestShorterApiHandler(t *testing.T) {
 	fileName := "short-url-db.json"
 	defer os.Remove(fileName)
 
+	producer, _ := storage.NewProducer(`text.json`)
+
 	h := &Handler{
 		ShortURLAddr: "http://localhost:8080",
-		Store:        *storage.NewInMemoryStorage(fileName),
+		Store:        *storage.NewInMemoryStorage(),
+		Producer:     *producer,
 	}
 
 	for _, test := range tests {
