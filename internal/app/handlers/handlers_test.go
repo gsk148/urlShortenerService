@@ -61,7 +61,7 @@ func TestCreateShortLinkHandler(t *testing.T) {
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
 			assert.Equal(t, test.want.contentType, res.Header.Get("content-type"))
-			//defer res.Body.Close()
+			defer res.Body.Close()
 		})
 	}
 }
@@ -114,7 +114,7 @@ func TestFindByShortLinkHandler(t *testing.T) {
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
 			assert.Equal(t, test.want.contentType, res.Header.Get("content-type"))
-			//defer res.Body.Close()
+			defer res.Body.Close()
 		})
 	}
 }
@@ -174,7 +174,7 @@ func TestShorterApiHandler(t *testing.T) {
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
 			assert.Equal(t, test.want.contentType, res.Header.Get("content-type"))
-			//defer res.Body.Close()
+			defer res.Body.Close()
 		})
 	}
 }
