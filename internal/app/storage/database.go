@@ -3,6 +3,8 @@ package storage
 import (
 	"context"
 	"database/sql"
+
+	_ "github.com/lib/pq"
 )
 
 type DBStorage struct {
@@ -10,21 +12,11 @@ type DBStorage struct {
 }
 
 func NewDBStorage(dsn string) *DBStorage {
-	db, err := sql.Open("pgx", dsn)
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		panic(err)
 	}
-	_, err = db.Exec(`
-        CREATE TABLE IF NOT EXISTS shortener (
-            id SERIAL PRIMARY KEY,
-            uuid TEXT NOT NULL,
-            short_url TEXT NOT NULL UNIQUE,
-            original_url TEXT NOT NULL
-        );
-    `)
-	if err != nil {
-		panic(err)
-	}
+
 	return &DBStorage{
 		DB: db,
 	}
