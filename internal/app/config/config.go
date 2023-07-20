@@ -28,6 +28,9 @@ func Load() *Config {
 	if envBaseAddr := os.Getenv("BASE_URL"); envBaseAddr != "" {
 		cfg.ShortURLAddr = envBaseAddr
 	}
+	if envStorageType := os.Getenv("STORAGE_TYPE"); envStorageType != "" {
+		cfg.StorageType = envStorageType
+	}
 
 	if envFileStoragePath := os.Getenv("FILE_STORAGE_PATH"); envFileStoragePath != "" {
 		cfg.FileStoragePath = envFileStoragePath
