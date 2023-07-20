@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -47,14 +46,9 @@ func TestCreateShortLinkHandler(t *testing.T) {
 		},
 	}
 
-	fileName := "short-url-db.json"
-	producer, _ := storage.NewProducer(fileName)
-	defer os.Remove(fileName)
-
 	h := &Handler{
 		ShortURLAddr: "http://localhost:8080",
-		Store:        *storage.NewInMemoryStorage(),
-		Producer:     *producer,
+		Store:        storage.NewInMemoryStorage(),
 	}
 
 	for _, test := range tests {
@@ -67,7 +61,7 @@ func TestCreateShortLinkHandler(t *testing.T) {
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
 			assert.Equal(t, test.want.contentType, res.Header.Get("content-type"))
-			defer res.Body.Close()
+			//defer res.Body.Close()
 		})
 	}
 }
@@ -105,14 +99,9 @@ func TestFindByShortLinkHandler(t *testing.T) {
 		},
 	}
 
-	fileName := "short-url-db.json"
-	producer, _ := storage.NewProducer(fileName)
-	defer os.Remove(fileName)
-
 	h := &Handler{
 		ShortURLAddr: "http://localhost:8080",
-		Store:        *storage.NewInMemoryStorage(),
-		Producer:     *producer,
+		Store:        storage.NewInMemoryStorage(),
 	}
 
 	for _, test := range tests {
@@ -125,7 +114,7 @@ func TestFindByShortLinkHandler(t *testing.T) {
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
 			assert.Equal(t, test.want.contentType, res.Header.Get("content-type"))
-			defer res.Body.Close()
+			//defer res.Body.Close()
 		})
 	}
 }
@@ -168,15 +157,10 @@ func TestShorterApiHandler(t *testing.T) {
 			},
 		},
 	}
-	fileName := "short-url-db.json"
-	defer os.Remove(fileName)
-
-	producer, _ := storage.NewProducer(`text.json`)
 
 	h := &Handler{
 		ShortURLAddr: "http://localhost:8080",
-		Store:        *storage.NewInMemoryStorage(),
-		Producer:     *producer,
+		Store:        storage.NewInMemoryStorage(),
 	}
 
 	for _, test := range tests {
@@ -190,7 +174,7 @@ func TestShorterApiHandler(t *testing.T) {
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
 			assert.Equal(t, test.want.contentType, res.Header.Get("content-type"))
-			defer res.Body.Close()
+			//defer res.Body.Close()
 		})
 	}
 }

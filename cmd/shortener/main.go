@@ -16,21 +16,16 @@ import (
 
 func main() {
 	cfg := config.Load()
-	producer, err := storage.NewProducer(cfg.FileStoragePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer producer.Close()
 
-	store := storage.NewInMemoryStorage()
+	store := storage.NewStorage(*cfg)
+
+	logger.NewLogger()
 
 	h := &handlers.Handler{
 		ShortURLAddr: cfg.ShortURLAddr,
-		Store:        *store,
-		Producer:     *producer,
+		Store:        store,
 	}
 
-	logger.NewLogger()
 	r := chi.NewRouter()
 
 	r.Use(middleware.Compress(5,
@@ -50,8 +45,9 @@ func main() {
 
 	r.Post("/", h.ShortenerHandler)
 	r.Get("/{id}", h.FindByShortLinkHandler)
+	r.Get("/ping", h.PingHandler)
 
-	err = http.ListenAndServe(cfg.ServerAddr, r)
+	err := http.ListenAndServe(cfg.ServerAddr, r)
 	if err != nil {
 		log.Fatal(err)
 	}

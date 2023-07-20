@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 
 	"github.com/gsk148/urlShorteningService/internal/app/api"
 	"github.com/gsk148/urlShorteningService/internal/app/storage"
@@ -15,8 +16,7 @@ import (
 
 type Handler struct {
 	ShortURLAddr string
-	Store        storage.InMemoryStorage
-	Producer     storage.Producer
+	Store        storage.Storage
 }
 
 func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
@@ -36,12 +36,23 @@ func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	encoded := hasher.CreateHash()
-	h.Store.Store(encoded, string(body))
+
+	err = h.Store.Store(storage.ShortenedData{
+		UUID:        uuid.New().String(),
+		ShortURL:    encoded,
+		OriginalURL: string(body),
+	})
+	if err != nil {
+		return
+	}
 	w.Header().Set("content-type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	url := h.ShortURLAddr + "/" + encoded
-	w.Write([]byte(url))
-	h.Producer.SaveToFileStorage(encoded, string(body))
+	_, err = w.Write([]byte(url))
+	if err != nil {
+		http.Error(w, "Failed to write response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *Handler) FindByShortLinkHandler(w http.ResponseWriter, r *http.Request) {
@@ -50,13 +61,13 @@ func (h *Handler) FindByShortLinkHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	shortLink := chi.URLParam(r, "id")
-	url, err := h.Store.Get(shortLink)
+	data, err := h.Store.Get(shortLink)
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 	w.Header().Set("content-type", "text/plain")
-	w.Header().Set("Location", url)
+	w.Header().Set("Location", data.OriginalURL)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
@@ -79,7 +90,14 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	encoded := hasher.CreateHash()
-	h.Store.Store(encoded, request.URL)
+	err = h.Store.Store(storage.ShortenedData{
+		UUID:        uuid.New().String(),
+		ShortURL:    encoded,
+		OriginalURL: request.URL,
+	})
+	if err != nil {
+		return
+	}
 
 	var response api.ShortenResponse
 	response.Result = h.ShortURLAddr + "/" + encoded
@@ -90,7 +108,17 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("content-type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	_, err = w.Write(result)
+	if err != nil {
+		http.Error(w, "Failed to write response", http.StatusInternalServerError)
+		return
+	}
+}
 
-	w.Write(result)
-	h.Producer.SaveToFileStorage(encoded, request.URL)
+func (h *Handler) PingHandler(res http.ResponseWriter, req *http.Request) {
+	if err := h.Store.Ping(); err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	res.WriteHeader(http.StatusOK)
 }
