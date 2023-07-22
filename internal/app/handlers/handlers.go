@@ -122,3 +122,46 @@ func (h *Handler) PingHandler(res http.ResponseWriter, req *http.Request) {
 	}
 	res.WriteHeader(http.StatusOK)
 }
+
+func (h *Handler) BatchShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
+	var reqItems []api.BatchShortenRequestItem
+	err := json.NewDecoder(r.Body).Decode(&reqItems)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	respItems := make([]api.BatchShortenResponseItem, 0, len(reqItems))
+
+	for _, reqItem := range reqItems {
+		shortURL := hasher.CreateHash()
+
+		err = h.Store.Store(storage.ShortenedData{
+			UUID:        uuid.New().String(),
+			ShortURL:    shortURL,
+			OriginalURL: reqItem.OriginalURL,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		respItems = append(respItems, api.BatchShortenResponseItem{
+			CorrelationID: reqItem.CorrelationID,
+			ShortURL:      h.ShortURLAddr + "/" + shortURL,
+		})
+	}
+
+	respBytes, err := json.Marshal(respItems)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_, err = w.Write(respBytes)
+	if err != nil {
+		http.Error(w, "Failed to write response", http.StatusInternalServerError)
+		return
+	}
+}

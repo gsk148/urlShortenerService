@@ -41,6 +41,7 @@ func main() {
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.AllowContentType("application/json"))
 		r.Post("/api/shorten", h.ShortenerAPIHandler)
+		r.Post("/api/shorten/batch", h.BatchShortenerAPIHandler)
 	})
 
 	r.Post("/", h.ShortenerHandler)
