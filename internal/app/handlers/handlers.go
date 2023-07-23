@@ -11,8 +11,8 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/gsk148/urlShorteningService/internal/app/api"
+	"github.com/gsk148/urlShorteningService/internal/app/hashutil"
 	"github.com/gsk148/urlShorteningService/internal/app/storage"
-	"github.com/gsk148/urlShorteningService/internal/app/utils/hasher"
 )
 
 type Handler struct {
@@ -36,7 +36,7 @@ func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	encoded := hasher.CreateHash()
+	encoded := hashutil.Encode(body)
 
 	storedData, err := h.Store.Store(storage.ShortenedData{
 		UUID:        uuid.New().String(),
@@ -100,7 +100,7 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	encoded := hasher.CreateHash()
+	encoded := hashutil.Encode([]byte(request.URL))
 	var response api.ShortenResponse
 	response.Result = h.ShortURLAddr + "/" + encoded
 	result, err := json.Marshal(response)
@@ -156,7 +156,7 @@ func (h *Handler) BatchShortenerAPIHandler(w http.ResponseWriter, r *http.Reques
 	respItems := make([]api.BatchShortenResponseItem, 0, len(reqItems))
 
 	for _, reqItem := range reqItems {
-		shortURL := hasher.CreateHash()
+		shortURL := hashutil.Encode([]byte(reqItem.OriginalURL))
 
 		_, err := h.Store.Store(storage.ShortenedData{
 			UUID:        uuid.New().String(),
