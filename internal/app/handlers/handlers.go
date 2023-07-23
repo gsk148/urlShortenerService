@@ -101,7 +101,15 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	encoded := hasher.CreateHash()
-	storedData, err := h.Store.Store(storage.ShortenedData{
+	var response api.ShortenResponse
+	response.Result = h.ShortURLAddr + "/" + encoded
+	result, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Marshaling response failed", http.StatusBadRequest)
+		return
+	}
+
+	_, err = h.Store.Store(storage.ShortenedData{
 		UUID:        uuid.New().String(),
 		ShortURL:    encoded,
 		OriginalURL: request.URL,
@@ -110,8 +118,8 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, &storage.ErrURLExists{}) {
 			w.Header().Set("content-type", "application/json")
 			w.WriteHeader(http.StatusConflict)
-			url := h.ShortURLAddr + "/" + storedData.ShortURL
-			_, err = w.Write([]byte(url))
+
+			_, err = w.Write(result)
 			if err != nil {
 				http.Error(w, "Failed to write response", http.StatusInternalServerError)
 				return
@@ -120,13 +128,6 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var response api.ShortenResponse
-	response.Result = h.ShortURLAddr + "/" + encoded
-	result, err := json.Marshal(response)
-	if err != nil {
-		http.Error(w, "Marshaling response failed", http.StatusBadRequest)
-		return
-	}
 	w.Header().Set("content-type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write(result)
