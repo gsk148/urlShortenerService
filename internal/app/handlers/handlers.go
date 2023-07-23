@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -37,13 +38,23 @@ func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
 
 	encoded := hasher.CreateHash()
 
-	err = h.Store.Store(storage.ShortenedData{
+	storedData, err := h.Store.Store(storage.ShortenedData{
 		UUID:        uuid.New().String(),
 		ShortURL:    encoded,
 		OriginalURL: string(body),
 	})
 	if err != nil {
-		return
+		if errors.Is(err, &storage.ErrURLExists{}) {
+			w.Header().Set("content-type", "text/plain")
+			w.WriteHeader(http.StatusConflict)
+			url := h.ShortURLAddr + "/" + storedData.ShortURL
+			_, err = w.Write([]byte(url))
+			if err != nil {
+				http.Error(w, "Failed to write response", http.StatusInternalServerError)
+				return
+			}
+			return
+		}
 	}
 	w.Header().Set("content-type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
@@ -90,13 +101,23 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	encoded := hasher.CreateHash()
-	err = h.Store.Store(storage.ShortenedData{
+	storedData, err := h.Store.Store(storage.ShortenedData{
 		UUID:        uuid.New().String(),
 		ShortURL:    encoded,
 		OriginalURL: request.URL,
 	})
 	if err != nil {
-		return
+		if errors.Is(err, &storage.ErrURLExists{}) {
+			w.Header().Set("content-type", "text/plain")
+			w.WriteHeader(http.StatusConflict)
+			url := h.ShortURLAddr + "/" + storedData.ShortURL
+			_, err = w.Write([]byte(url))
+			if err != nil {
+				http.Error(w, "Failed to write response", http.StatusInternalServerError)
+				return
+			}
+			return
+		}
 	}
 
 	var response api.ShortenResponse
@@ -136,7 +157,7 @@ func (h *Handler) BatchShortenerAPIHandler(w http.ResponseWriter, r *http.Reques
 	for _, reqItem := range reqItems {
 		shortURL := hasher.CreateHash()
 
-		err = h.Store.Store(storage.ShortenedData{
+		_, err := h.Store.Store(storage.ShortenedData{
 			UUID:        uuid.New().String(),
 			ShortURL:    shortURL,
 			OriginalURL: reqItem.OriginalURL,

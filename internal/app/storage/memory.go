@@ -14,9 +14,9 @@ func NewInMemoryStorage() *InMemoryStorage {
 	}
 }
 
-func (s *InMemoryStorage) Store(data ShortenedData) error {
+func (s *InMemoryStorage) Store(data ShortenedData) (ShortenedData, error) {
 	s.data[data.ShortURL] = data
-	return nil
+	return ShortenedData{}, nil
 }
 
 func (s *InMemoryStorage) Get(key string) (ShortenedData, error) {

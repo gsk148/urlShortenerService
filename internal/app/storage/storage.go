@@ -9,7 +9,7 @@ type ShortenedData struct {
 }
 
 type Storage interface {
-	Store(data ShortenedData) error
+	Store(data ShortenedData) (ShortenedData, error)
 	Get(key string) (ShortenedData, error)
 	Ping() error
 	Close() error

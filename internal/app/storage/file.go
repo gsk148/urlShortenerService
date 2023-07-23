@@ -44,7 +44,7 @@ func readFromFile(fs FileStorage) error {
 			return err
 		}
 
-		err := fs.inMemoryData.Store(sd)
+		_, err := fs.inMemoryData.Store(sd)
 		if err != nil {
 			return err
 		}
@@ -56,13 +56,10 @@ func readFromFile(fs FileStorage) error {
 	return nil
 }
 
-func (s *FileStorage) Store(data ShortenedData) error {
+func (s *FileStorage) Store(data ShortenedData) (ShortenedData, error) {
 	s.inMemoryData.data[data.ShortURL] = data
 	err := s.Save()
-	if err != nil {
-		return err
-	}
-	return nil
+	return ShortenedData{}, err
 }
 
 func (s *FileStorage) Get(key string) (ShortenedData, error) {

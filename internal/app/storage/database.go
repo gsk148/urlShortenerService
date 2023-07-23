@@ -8,6 +8,12 @@ import (
 	_ "github.com/lib/pq"
 )
 
+type ErrURLExists struct{}
+
+func (e *ErrURLExists) Error() string {
+	return "URL already exists"
+}
+
 type DBStorage struct {
 	DB *sql.DB
 }
@@ -25,6 +31,8 @@ func NewDBStorage(dsn string) *DBStorage {
             short_url TEXT NOT NULL UNIQUE,
             original_url TEXT NOT NULL
         );
+		CREATE UNIQUE INDEX  IF NOT EXISTS shortener_original_url_uindex
+		    on public.shortener (original_url);
     `)
 	if err != nil {
 		panic(err)
@@ -42,14 +50,31 @@ func (s *DBStorage) Ping() error {
 	return nil
 }
 
-func (s *DBStorage) Store(data ShortenedData) error {
-	_, err := s.DB.ExecContext(context.Background(),
-		"INSERT INTO shortener (uuid, short_url, original_url) VALUES ($1, $2, $3)",
+func (s *DBStorage) Store(data ShortenedData) (ShortenedData, error) {
+	result, err := s.DB.ExecContext(context.Background(),
+		"INSERT INTO shortener (uuid, short_url, original_url) VALUES ($1, $2, $3) ON CONFLICT (original_url) DO NOTHING",
 		data.UUID, data.ShortURL, data.OriginalURL)
 	if err != nil {
-		return err
+		return ShortenedData{}, err
 	}
-	return nil
+
+	affectedRows, err := result.RowsAffected()
+	if err != nil {
+		return ShortenedData{}, err
+	}
+
+	if affectedRows == 0 {
+		row := s.DB.QueryRowContext(context.Background(),
+			"SELECT uuid, short_url, original_url FROM shortener WHERE original_url = $1", data.OriginalURL)
+		var existingData ShortenedData
+		err := row.Scan(&existingData.UUID, &existingData.ShortURL, &existingData.OriginalURL)
+		if err != nil {
+			return ShortenedData{}, err
+		}
+		return existingData, &ErrURLExists{}
+	}
+
+	return data, nil
 }
 
 func (s *DBStorage) Get(key string) (ShortenedData, error) {
