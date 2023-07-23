@@ -1,6 +1,8 @@
 package storage
 
-import "errors"
+import (
+	"errors"
+)
 
 type InMemoryStorage struct {
 	data map[string]string
@@ -12,9 +14,8 @@ func NewInMemoryStorage() *InMemoryStorage {
 	}
 }
 
-func (s *InMemoryStorage) Store(key string, value string) error {
+func (s *InMemoryStorage) Store(key string, value string) {
 	s.data[key] = value
-	return nil
 }
 
 func (s *InMemoryStorage) Get(key string) (string, error) {
