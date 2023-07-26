@@ -17,7 +17,10 @@ import (
 func main() {
 	cfg := config.Load()
 
-	store := storage.NewStorage(*cfg)
+	store, err := storage.NewStorage(*cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	logger.NewLogger()
 
@@ -48,7 +51,7 @@ func main() {
 	r.Get("/{id}", h.FindByShortLinkHandler)
 	r.Get("/ping", h.PingHandler)
 
-	err := http.ListenAndServe(cfg.ServerAddr, r)
+	err = http.ListenAndServe(cfg.ServerAddr, r)
 	if err != nil {
 		log.Fatal(err)
 	}

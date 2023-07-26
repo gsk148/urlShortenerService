@@ -12,7 +12,7 @@ type FileStorage struct {
 	filePath     string
 }
 
-func NewFileStorage(filename string) *FileStorage {
+func NewFileStorage(filename string) (*FileStorage, error) {
 	inMemoryData := NewInMemoryStorage()
 	fs := FileStorage{
 		inMemoryData: inMemoryData,
@@ -21,10 +21,10 @@ func NewFileStorage(filename string) *FileStorage {
 
 	err := readFromFile(fs)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return &fs
+	return &fs, nil
 }
 
 func readFromFile(fs FileStorage) error {

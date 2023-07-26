@@ -18,10 +18,10 @@ type DBStorage struct {
 	DB *sql.DB
 }
 
-func NewDBStorage(dsn string) *DBStorage {
+func NewDBStorage(dsn string) (*DBStorage, error) {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	_, err = db.Exec(`
@@ -35,12 +35,12 @@ func NewDBStorage(dsn string) *DBStorage {
 		    on public.shortener (original_url);
     `)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	return &DBStorage{
 		DB: db,
-	}
+	}, nil
 }
 
 func (s *DBStorage) Ping() error {

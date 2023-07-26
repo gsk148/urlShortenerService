@@ -15,15 +15,15 @@ type Storage interface {
 	Close() error
 }
 
-func NewStorage(cfg config.Config) Storage {
+func NewStorage(cfg config.Config) (Storage, error) {
 	switch cfg.StorageType {
 	case "memory":
-		return NewInMemoryStorage()
+		return NewInMemoryStorage(), nil
 	case "file":
 		return NewFileStorage(cfg.FileStoragePath)
 	case "db":
 		return NewDBStorage(cfg.DatabaseDSN)
 	default:
-		return NewInMemoryStorage()
+		return NewInMemoryStorage(), nil
 	}
 }
