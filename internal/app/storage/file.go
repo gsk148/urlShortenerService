@@ -1,49 +1,104 @@
 package storage
 
 import (
+	"bufio"
 	"encoding/json"
+	"errors"
 	"os"
-
-	"github.com/google/uuid"
 )
 
-type Event struct {
-	UUID        string `json:"uuid"`
-	ShortURL    string `json:"short_url"`
-	OriginalURL string `json:"original_url"`
+type FileStorage struct {
+	inMemoryData *InMemoryStorage
+	filePath     string
 }
 
-type Producer struct {
-	file    *os.File
-	encoder *json.Encoder
-}
+func NewFileStorage(filename string) (*FileStorage, error) {
+	inMemoryData := NewInMemoryStorage()
+	fs := FileStorage{
+		inMemoryData: inMemoryData,
+		filePath:     filename,
+	}
 
-func NewProducer(fileName string) (*Producer, error) {
-	file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
+	err := readFromFile(fs)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Producer{
-		file:    file,
-		encoder: json.NewEncoder(file),
-	}, nil
+	return &fs, nil
 }
 
-func (p *Producer) WriteEvent(event *Event) error {
-	return p.encoder.Encode(&event)
-}
+func readFromFile(fs FileStorage) error {
+	file, err := os.OpenFile(fs.filePath, os.O_RDONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
 
-func (p *Producer) Close() error {
-	return p.file.Close()
-}
+	scanner := bufio.NewScanner(file)
 
-func (p *Producer) SaveToFileStorage(shortURL, originalURL string) error {
-	event := Event{
-		UUID:        uuid.NewString(),
-		ShortURL:    shortURL,
-		OriginalURL: originalURL,
+	for scanner.Scan() {
+		line := scanner.Bytes()
+
+		var sd ShortenedData
+		if err := json.Unmarshal(line, &sd); err != nil {
+			return err
+		}
+
+		_, err := fs.inMemoryData.Store(sd)
+		if err != nil {
+			return err
+		}
 	}
 
-	return p.WriteEvent(&event)
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *FileStorage) Store(data ShortenedData) (ShortenedData, error) {
+	s.inMemoryData.data[data.ShortURL] = data
+	err := s.Save()
+	return ShortenedData{}, err
+}
+
+func (s *FileStorage) Get(key string) (ShortenedData, error) {
+	data, exists := s.inMemoryData.data[key]
+	if !exists {
+		return ShortenedData{}, errors.New("key not found: " + key)
+	}
+	return data, nil
+}
+
+func (s *FileStorage) Save() error {
+	file, err := os.OpenFile(s.filePath, os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	writer := bufio.NewWriter(file)
+	for _, v := range s.inMemoryData.data {
+		line, err := json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		_, err = writer.Write(append(line, '\n'))
+		if err != nil {
+			return err
+		}
+	}
+	err = writer.Flush()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *FileStorage) Ping() error {
+	return nil
+}
+
+func (s *FileStorage) Close() error {
+	return s.Save()
 }

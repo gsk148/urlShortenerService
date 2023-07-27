@@ -2,21 +2,22 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 
 	"github.com/gsk148/urlShorteningService/internal/app/api"
+	"github.com/gsk148/urlShorteningService/internal/app/hashutil"
 	"github.com/gsk148/urlShorteningService/internal/app/storage"
-	"github.com/gsk148/urlShorteningService/internal/app/utils/hasher"
 )
 
 type Handler struct {
 	ShortURLAddr string
-	Store        storage.InMemoryStorage
-	Producer     storage.Producer
+	Store        storage.Storage
 }
 
 func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
@@ -35,13 +36,34 @@ func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	encoded := hasher.CreateHash()
-	h.Store.Store(encoded, string(body))
+	encoded := hashutil.Encode(body)
+
+	storedData, err := h.Store.Store(storage.ShortenedData{
+		UUID:        uuid.New().String(),
+		ShortURL:    encoded,
+		OriginalURL: string(body),
+	})
+	if err != nil {
+		if errors.Is(err, &storage.ErrURLExists{}) {
+			w.Header().Set("content-type", "text/plain")
+			w.WriteHeader(http.StatusConflict)
+			url := h.ShortURLAddr + "/" + storedData.ShortURL
+			_, err = w.Write([]byte(url))
+			if err != nil {
+				http.Error(w, "Failed to write response", http.StatusInternalServerError)
+				return
+			}
+			return
+		}
+	}
 	w.Header().Set("content-type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	url := h.ShortURLAddr + "/" + encoded
-	w.Write([]byte(url))
-	h.Producer.SaveToFileStorage(encoded, string(body))
+	_, err = w.Write([]byte(url))
+	if err != nil {
+		http.Error(w, "Failed to write response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *Handler) FindByShortLinkHandler(w http.ResponseWriter, r *http.Request) {
@@ -50,13 +72,13 @@ func (h *Handler) FindByShortLinkHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	shortLink := chi.URLParam(r, "id")
-	url, err := h.Store.Get(shortLink)
+	data, err := h.Store.Get(shortLink)
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 	w.Header().Set("content-type", "text/plain")
-	w.Header().Set("Location", url)
+	w.Header().Set("Location", data.OriginalURL)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
@@ -78,9 +100,7 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	encoded := hasher.CreateHash()
-	h.Store.Store(encoded, request.URL)
-
+	encoded := hashutil.Encode([]byte(request.URL))
 	var response api.ShortenResponse
 	response.Result = h.ShortURLAddr + "/" + encoded
 	result, err := json.Marshal(response)
@@ -88,9 +108,82 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Marshaling response failed", http.StatusBadRequest)
 		return
 	}
+
+	_, err = h.Store.Store(storage.ShortenedData{
+		UUID:        uuid.New().String(),
+		ShortURL:    encoded,
+		OriginalURL: request.URL,
+	})
+	if err != nil {
+		if errors.Is(err, &storage.ErrURLExists{}) {
+			w.Header().Set("content-type", "application/json")
+			w.WriteHeader(http.StatusConflict)
+
+			_, err = w.Write(result)
+			if err != nil {
+				http.Error(w, "Failed to write response", http.StatusInternalServerError)
+				return
+			}
+			return
+		}
+	}
+
 	w.Header().Set("content-type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	_, err = w.Write(result)
+	if err != nil {
+		http.Error(w, "Failed to write response", http.StatusInternalServerError)
+		return
+	}
+}
 
-	w.Write(result)
-	h.Producer.SaveToFileStorage(encoded, request.URL)
+func (h *Handler) PingHandler(res http.ResponseWriter, req *http.Request) {
+	if err := h.Store.Ping(); err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	res.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) BatchShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
+	var reqItems []api.BatchShortenRequestItem
+	err := json.NewDecoder(r.Body).Decode(&reqItems)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	respItems := make([]api.BatchShortenResponseItem, 0, len(reqItems))
+
+	for _, reqItem := range reqItems {
+		shortURL := hashutil.Encode([]byte(reqItem.OriginalURL))
+
+		_, err := h.Store.Store(storage.ShortenedData{
+			UUID:        uuid.New().String(),
+			ShortURL:    shortURL,
+			OriginalURL: reqItem.OriginalURL,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		respItems = append(respItems, api.BatchShortenResponseItem{
+			CorrelationID: reqItem.CorrelationID,
+			ShortURL:      h.ShortURLAddr + "/" + shortURL,
+		})
+	}
+
+	respBytes, err := json.Marshal(respItems)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_, err = w.Write(respBytes)
+	if err != nil {
+		http.Error(w, "Failed to write response", http.StatusInternalServerError)
+		return
+	}
 }
