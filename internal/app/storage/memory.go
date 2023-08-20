@@ -34,3 +34,10 @@ func (s *InMemoryStorage) Ping() error {
 func (s *InMemoryStorage) Close() error {
 	return nil
 }
+
+func (s *InMemoryStorage) GetBatchByUserID(userID string) ([]ShortenedData, error) {
+	var data []ShortenedData
+	data = append(data, ShortenedData{})
+
+	return data, nil
+}

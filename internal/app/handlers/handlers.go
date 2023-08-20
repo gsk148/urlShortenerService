@@ -9,8 +9,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-
 	"github.com/gsk148/urlShorteningService/internal/app/api"
+	"github.com/gsk148/urlShorteningService/internal/app/auth"
 	"github.com/gsk148/urlShorteningService/internal/app/hashutil"
 	"github.com/gsk148/urlShorteningService/internal/app/storage"
 )
@@ -38,7 +38,13 @@ func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
 
 	encoded := hashutil.Encode(body)
 
+	userID, err := auth.GetUserToken(w, r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
 	storedData, err := h.Store.Store(storage.ShortenedData{
+		UserID:      userID,
 		UUID:        uuid.New().String(),
 		ShortURL:    encoded,
 		OriginalURL: string(body),
@@ -109,8 +115,14 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userID, err := auth.GetUserToken(w, r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
 	_, err = h.Store.Store(storage.ShortenedData{
 		UUID:        uuid.New().String(),
+		UserID:      userID,
 		ShortURL:    encoded,
 		OriginalURL: request.URL,
 	})
@@ -154,11 +166,17 @@ func (h *Handler) BatchShortenerAPIHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	respItems := make([]api.BatchShortenResponseItem, 0, len(reqItems))
+	userID, err := auth.GetUserToken(w, r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 
 	for _, reqItem := range reqItems {
 		shortURL := hashutil.Encode([]byte(reqItem.OriginalURL))
 
 		_, err := h.Store.Store(storage.ShortenedData{
+			UserID:      userID,
 			UUID:        uuid.New().String(),
 			ShortURL:    shortURL,
 			OriginalURL: reqItem.OriginalURL,
@@ -186,4 +204,38 @@ func (h *Handler) BatchShortenerAPIHandler(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Failed to write response", http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *Handler) FindUserURLS(w http.ResponseWriter, r *http.Request) {
+	userID, err := auth.GetUserToken(w, r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	batch, err := h.Store.GetBatchByUserID(userID)
+	type UserLinksResponse struct {
+		ShortURL    string `json:"short_url"`
+		OriginalURL string `json:"original_url"`
+	}
+	var result []UserLinksResponse
+
+	for _, v := range batch {
+		shortUrl := h.ShortURLAddr + "/" + v.ShortURL
+		b := &UserLinksResponse{shortUrl, v.OriginalURL}
+		result = append(result, *b)
+	}
+
+	if len(result) < 1 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	response, err := json.Marshal(result)
+	if err != nil {
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(response)
 }

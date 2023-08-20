@@ -45,6 +45,7 @@ func main() {
 		r.Use(middleware.AllowContentType("application/json"))
 		r.Post("/api/shorten", h.ShortenerAPIHandler)
 		r.Post("/api/shorten/batch", h.BatchShortenerAPIHandler)
+		r.Get("/api/user/urls", h.FindUserURLS)
 	})
 
 	r.Post("/", h.ShortenerHandler)

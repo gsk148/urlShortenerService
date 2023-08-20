@@ -27,6 +27,7 @@ func NewDBStorage(dsn string) (*DBStorage, error) {
 	_, err = db.Exec(`
         CREATE TABLE IF NOT EXISTS shortener (
             id SERIAL PRIMARY KEY,
+            user_id TEXT NOT NULL NULL,
             uuid TEXT NOT NULL,
             short_url TEXT NOT NULL UNIQUE,
             original_url TEXT NOT NULL
@@ -52,8 +53,8 @@ func (s *DBStorage) Ping() error {
 
 func (s *DBStorage) Store(data ShortenedData) (ShortenedData, error) {
 	result, err := s.DB.ExecContext(context.Background(),
-		"INSERT INTO shortener (uuid, short_url, original_url) VALUES ($1, $2, $3) ON CONFLICT (original_url) DO NOTHING",
-		data.UUID, data.ShortURL, data.OriginalURL)
+		"INSERT INTO shortener (uuid, user_id, short_url, original_url) VALUES ($1, $2, $3, $4) ON CONFLICT (original_url) DO NOTHING",
+		data.UUID, data.UserID, data.ShortURL, data.OriginalURL)
 	if err != nil {
 		return ShortenedData{}, err
 	}
@@ -80,13 +81,14 @@ func (s *DBStorage) Store(data ShortenedData) (ShortenedData, error) {
 func (s *DBStorage) Get(key string) (ShortenedData, error) {
 	var (
 		uuid        string
+		userID      string
 		shortURL    string
 		originalURL string
 	)
 
 	row := s.DB.QueryRowContext(context.Background(),
-		"SELECT uuid, short_url, original_url FROM shortener WHERE short_url = $1", key)
-	err := row.Scan(&uuid, &shortURL, &originalURL)
+		"SELECT uuid, user_id, short_url, original_url FROM shortener WHERE short_url = $1", key)
+	err := row.Scan(&uuid, &userID, &shortURL, &originalURL)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ShortenedData{}, errors.New("key not found: " + key)
@@ -96,6 +98,7 @@ func (s *DBStorage) Get(key string) (ShortenedData, error) {
 	}
 	return ShortenedData{
 		UUID:        uuid,
+		UserID:      userID,
 		ShortURL:    shortURL,
 		OriginalURL: originalURL,
 	}, nil
@@ -103,4 +106,31 @@ func (s *DBStorage) Get(key string) (ShortenedData, error) {
 
 func (s *DBStorage) Close() error {
 	return s.DB.Close()
+}
+
+func (s *DBStorage) GetBatchByUserID(userID string) ([]ShortenedData, error) {
+	var (
+		entity ShortenedData
+		result []ShortenedData
+	)
+	query := "select short_url, original_url from shortener where user_id=$1"
+	rows, err := s.DB.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	for rows.Next() {
+		err = rows.Scan(&entity.ShortURL, &entity.OriginalURL)
+		if err != nil {
+			break
+		}
+		result = append(result, entity)
+	}
+	if len(result) == 0 {
+		return nil, errors.New("no batches by provided userID")
+	}
+	return result, nil
 }
