@@ -215,6 +215,7 @@ func (h *Handler) FindUserURLS(w http.ResponseWriter, r *http.Request) {
 
 	batch, err := h.Store.GetBatchByUserID(userID)
 	if err != nil {
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
