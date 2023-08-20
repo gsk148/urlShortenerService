@@ -27,7 +27,7 @@ func NewDBStorage(dsn string) (*DBStorage, error) {
 	_, err = db.Exec(`
         CREATE TABLE IF NOT EXISTS shortener (
             id SERIAL PRIMARY KEY,
-            user_id TEXT NOT NULL NULL,
+            user_id TEXT NOT NULL,
             uuid TEXT NOT NULL,
             short_url TEXT NOT NULL UNIQUE,
             original_url TEXT NOT NULL
@@ -66,9 +66,9 @@ func (s *DBStorage) Store(data ShortenedData) (ShortenedData, error) {
 
 	if affectedRows == 0 {
 		row := s.DB.QueryRowContext(context.Background(),
-			"SELECT uuid, short_url, original_url FROM shortener WHERE original_url = $1", data.OriginalURL)
+			"SELECT uuid, user_id, short_url, original_url FROM shortener WHERE original_url = $1", data.OriginalURL)
 		var existingData ShortenedData
-		err := row.Scan(&existingData.UUID, &existingData.ShortURL, &existingData.OriginalURL)
+		err := row.Scan(&existingData.UUID, &existingData.UserID, &existingData.ShortURL, &existingData.OriginalURL)
 		if err != nil {
 			return ShortenedData{}, err
 		}
@@ -97,8 +97,8 @@ func (s *DBStorage) Get(key string) (ShortenedData, error) {
 		}
 	}
 	return ShortenedData{
-		UUID:        uuid,
 		UserID:      userID,
+		UUID:        uuid,
 		ShortURL:    shortURL,
 		OriginalURL: originalURL,
 	}, nil
