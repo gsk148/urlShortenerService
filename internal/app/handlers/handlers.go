@@ -121,8 +121,8 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = h.Store.Store(storage.ShortenedData{
-		UUID:        uuid.New().String(),
 		UserID:      userID,
+		UUID:        uuid.New().String(),
 		ShortURL:    encoded,
 		OriginalURL: request.URL,
 	})
@@ -214,6 +214,10 @@ func (h *Handler) FindUserURLS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	batch, err := h.Store.GetBatchByUserID(userID)
+	if len(batch) < 1 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	type UserLinksResponse struct {
 		ShortURL    string `json:"short_url"`
 		OriginalURL string `json:"original_url"`
@@ -221,14 +225,9 @@ func (h *Handler) FindUserURLS(w http.ResponseWriter, r *http.Request) {
 	var result []UserLinksResponse
 
 	for _, v := range batch {
-		shortUrl := h.ShortURLAddr + "/" + v.ShortURL
-		b := &UserLinksResponse{shortUrl, v.OriginalURL}
+		shortURL := h.ShortURLAddr + "/" + v.ShortURL
+		b := &UserLinksResponse{shortURL, v.OriginalURL}
 		result = append(result, *b)
-	}
-
-	if len(result) < 1 {
-		w.WriteHeader(http.StatusNoContent)
-		return
 	}
 
 	response, err := json.Marshal(result)
