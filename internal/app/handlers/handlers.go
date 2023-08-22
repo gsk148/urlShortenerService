@@ -84,7 +84,7 @@ func (h *Handler) FindByShortLinkHandler(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
-	if data.IsDeleted == true {
+	if data.IsDeleted {
 		w.WriteHeader(http.StatusGone)
 		return
 	}
