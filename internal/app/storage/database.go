@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 
 	_ "github.com/lib/pq"
 )
@@ -30,7 +31,8 @@ func NewDBStorage(dsn string) (*DBStorage, error) {
             user_id TEXT NOT NULL,
             uuid TEXT NOT NULL,
             short_url TEXT NOT NULL UNIQUE,
-            original_url TEXT NOT NULL
+            original_url TEXT NOT NULL,
+            is_deleted BOOLEAN
         );
 		CREATE UNIQUE INDEX  IF NOT EXISTS shortener_original_url_uindex
 		    on public.shortener (original_url);
@@ -53,8 +55,8 @@ func (s *DBStorage) Ping() error {
 
 func (s *DBStorage) Store(data ShortenedData) (ShortenedData, error) {
 	result, err := s.DB.ExecContext(context.Background(),
-		"INSERT INTO shortener (uuid, user_id, short_url, original_url) VALUES ($1, $2, $3, $4) ON CONFLICT (original_url) DO NOTHING",
-		data.UUID, data.UserID, data.ShortURL, data.OriginalURL)
+		"INSERT INTO shortener (uuid, user_id, short_url, original_url, is_deleted) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (original_url) DO NOTHING",
+		data.UUID, data.UserID, data.ShortURL, data.OriginalURL, data.IsDeleted)
 	if err != nil {
 		return ShortenedData{}, err
 	}
@@ -84,11 +86,12 @@ func (s *DBStorage) Get(key string) (ShortenedData, error) {
 		userID      string
 		shortURL    string
 		originalURL string
+		isDeleted   bool
 	)
 
 	row := s.DB.QueryRowContext(context.Background(),
-		"SELECT uuid, user_id, short_url, original_url FROM shortener WHERE short_url = $1", key)
-	err := row.Scan(&uuid, &userID, &shortURL, &originalURL)
+		"SELECT uuid, user_id, short_url, original_url, is_deleted FROM shortener WHERE short_url = $1", key)
+	err := row.Scan(&uuid, &userID, &shortURL, &originalURL, &isDeleted)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ShortenedData{}, errors.New("key not found: " + key)
@@ -101,6 +104,7 @@ func (s *DBStorage) Get(key string) (ShortenedData, error) {
 		UUID:        uuid,
 		ShortURL:    shortURL,
 		OriginalURL: originalURL,
+		IsDeleted:   isDeleted,
 	}, nil
 }
 
@@ -133,4 +137,18 @@ func (s *DBStorage) GetBatchByUserID(userID string) ([]ShortenedData, error) {
 		return nil, errors.New("no batches by provided userID")
 	}
 	return result, nil
+}
+
+func (s *DBStorage) DeleteByUserIDAndShort(userID string, short string) error {
+	query := "UPDATE shortener SET is_deleted=true WHERE user_id=$1 AND short_url=$2"
+	rows, err := s.DB.Exec(query, userID, short)
+	if err != nil {
+		return err
+	}
+	if r, err := rows.RowsAffected(); err != nil || r == 0 {
+		log.Printf("0 rows affected in delete")
+		return err
+	}
+	log.Printf("Marked as deleted link %s", short)
+	return nil
 }

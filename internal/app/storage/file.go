@@ -109,3 +109,7 @@ func (s *FileStorage) GetBatchByUserID(userID string) ([]ShortenedData, error) {
 
 	return data, nil
 }
+
+func (s *FileStorage) DeleteByUserIDAndShort(userID string, shortURL string) error {
+	return errors.New("Error")
+}

@@ -41,3 +41,7 @@ func (s *InMemoryStorage) GetBatchByUserID(userID string) ([]ShortenedData, erro
 
 	return data, nil
 }
+
+func (s *InMemoryStorage) DeleteByUserIDAndShort(userID string, shortURL string) error {
+	return errors.New("Error")
+}

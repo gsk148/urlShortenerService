@@ -7,6 +7,7 @@ type ShortenedData struct {
 	UUID        string `json:"uuid"`
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
+	IsDeleted   bool   `json:"is_deleted"`
 }
 
 type Storage interface {
@@ -15,6 +16,7 @@ type Storage interface {
 	Ping() error
 	Close() error
 	GetBatchByUserID(userID string) ([]ShortenedData, error)
+	DeleteByUserIDAndShort(userID string, shortURL string) error
 }
 
 func NewStorage(cfg config.Config) (Storage, error) {
