@@ -1,6 +1,10 @@
 package storage
 
-import "github.com/gsk148/urlShorteningService/internal/app/config"
+import (
+	"go.uber.org/zap"
+
+	"github.com/gsk148/urlShorteningService/internal/app/config"
+)
 
 type ShortenedData struct {
 	UserID      string `json:"userID"`
@@ -19,14 +23,14 @@ type Storage interface {
 	DeleteByUserIDAndShort(userID string, shortURL string) error
 }
 
-func NewStorage(cfg config.Config) (Storage, error) {
+func NewStorage(cfg config.Config, logger zap.SugaredLogger) (Storage, error) {
 	switch cfg.StorageType {
 	case "memory":
 		return NewInMemoryStorage(), nil
 	case "file":
 		return NewFileStorage(cfg.FileStoragePath)
 	case "db":
-		return NewDBStorage(cfg.DatabaseDSN)
+		return NewDBStorage(cfg.DatabaseDSN, logger)
 	default:
 		return NewInMemoryStorage(), nil
 	}

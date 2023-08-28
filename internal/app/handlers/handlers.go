@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"log"
 	"net/http"
 	"strings"
+
+	"go.uber.org/zap"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -19,6 +20,7 @@ import (
 type Handler struct {
 	ShortURLAddr string
 	Store        storage.Storage
+	Logger       zap.SugaredLogger
 }
 
 func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
@@ -281,7 +283,7 @@ func (h *Handler) MarkAsDeleted(inputShort chan string, userID string) {
 	for v := range inputShort {
 		err := h.Store.DeleteByUserIDAndShort(userID, v)
 		if err != nil {
-			log.Printf("Failed to mark deleted by short %s", v)
+			h.Logger.Warnf("Failed to mark deleted by short %s", v)
 		}
 	}
 }

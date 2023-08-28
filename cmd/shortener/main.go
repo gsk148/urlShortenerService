@@ -17,16 +17,16 @@ import (
 func main() {
 	cfg := config.Load()
 
-	store, err := storage.NewStorage(*cfg)
+	myLog := logger.NewLogger()
+	store, err := storage.NewStorage(*cfg, *myLog)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	logger.NewLogger()
-
 	h := &handlers.Handler{
 		ShortURLAddr: cfg.ShortURLAddr,
 		Store:        store,
+		Logger:       *myLog,
 	}
 
 	r := chi.NewRouter()

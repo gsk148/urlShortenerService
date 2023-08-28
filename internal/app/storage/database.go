@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"log"
 
 	_ "github.com/lib/pq"
+	"go.uber.org/zap"
 )
 
 type ErrURLExists struct{}
@@ -16,10 +16,11 @@ func (e *ErrURLExists) Error() string {
 }
 
 type DBStorage struct {
-	DB *sql.DB
+	DB     *sql.DB
+	logger zap.SugaredLogger
 }
 
-func NewDBStorage(dsn string) (*DBStorage, error) {
+func NewDBStorage(dsn string, logger zap.SugaredLogger) (*DBStorage, error) {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, err
@@ -42,7 +43,8 @@ func NewDBStorage(dsn string) (*DBStorage, error) {
 	}
 
 	return &DBStorage{
-		DB: db,
+		DB:     db,
+		logger: logger,
 	}, nil
 }
 
@@ -146,9 +148,9 @@ func (s *DBStorage) DeleteByUserIDAndShort(userID string, short string) error {
 		return err
 	}
 	if r, err := rows.RowsAffected(); err != nil || r == 0 {
-		log.Printf("0 rows affected in delete")
+		s.logger.Info("0 rows affected in delete")
 		return err
 	}
-	log.Printf("Marked as deleted link %s", short)
+	s.logger.Infof("Marked as deleted link %s", short)
 	return nil
 }
