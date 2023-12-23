@@ -17,16 +17,16 @@ import (
 func main() {
 	cfg := config.Load()
 
-	store, err := storage.NewStorage(*cfg)
+	myLog := logger.NewLogger()
+	store, err := storage.NewStorage(*cfg, *myLog)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	logger.NewLogger()
-
 	h := &handlers.Handler{
 		ShortURLAddr: cfg.ShortURLAddr,
 		Store:        store,
+		Logger:       *myLog,
 	}
 
 	r := chi.NewRouter()
@@ -45,6 +45,8 @@ func main() {
 		r.Use(middleware.AllowContentType("application/json"))
 		r.Post("/api/shorten", h.ShortenerAPIHandler)
 		r.Post("/api/shorten/batch", h.BatchShortenerAPIHandler)
+		r.Get("/api/user/urls", h.FindUserURLS)
+		r.Delete("/api/user/urls", h.DeleteURLs)
 	})
 
 	r.Post("/", h.ShortenerHandler)

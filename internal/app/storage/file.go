@@ -102,3 +102,14 @@ func (s *FileStorage) Ping() error {
 func (s *FileStorage) Close() error {
 	return s.Save()
 }
+
+func (s *FileStorage) GetBatchByUserID(userID string) ([]ShortenedData, error) {
+	var data []ShortenedData
+	data = append(data, ShortenedData{})
+
+	return data, nil
+}
+
+func (s *FileStorage) DeleteByUserIDAndShort(userID string, shortURL string) error {
+	return errors.New("Error")
+}
