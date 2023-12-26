@@ -44,6 +44,7 @@ func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
 	userID, err := auth.GetUserToken(w, r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	storedData, err := h.Store.Store(storage.ShortenedData{
