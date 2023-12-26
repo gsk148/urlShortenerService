@@ -1,3 +1,4 @@
+// Package compress contains method for Gzip compressing
 package compress
 
 import (
@@ -5,6 +6,7 @@ import (
 	"net/http"
 )
 
+// Middleware compresses gzip format in middleware
 func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get(`Content-Encoding`) == `gzip` {

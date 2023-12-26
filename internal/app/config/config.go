@@ -5,6 +5,7 @@ import (
 	"os"
 )
 
+// Config contains environment variables which should be set
 type Config struct {
 	ServerAddr      string
 	ShortURLAddr    string
@@ -13,6 +14,7 @@ type Config struct {
 	DatabaseDSN     string
 }
 
+// Load gets env vars from arguments or environment
 func Load() *Config {
 	cfg := &Config{}
 	flag.StringVar(&cfg.ServerAddr, "a", "localhost:8080", "The starting server address (format: host:port)")

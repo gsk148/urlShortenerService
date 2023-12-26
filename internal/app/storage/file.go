@@ -7,11 +7,13 @@ import (
 	"os"
 )
 
+// FileStorage structure of FileStorage
 type FileStorage struct {
 	inMemoryData *InMemoryStorage
 	filePath     string
 }
 
+// NewFileStorage return NewFileStorage object
 func NewFileStorage(filename string) (*FileStorage, error) {
 	inMemoryData := NewInMemoryStorage()
 	fs := FileStorage{
@@ -56,12 +58,14 @@ func readFromFile(fs FileStorage) error {
 	return nil
 }
 
+// Store data and return error if already exists and short url if not
 func (s *FileStorage) Store(data ShortenedData) (ShortenedData, error) {
 	s.inMemoryData.data[data.ShortURL] = data
 	err := s.Save()
 	return ShortenedData{}, err
 }
 
+// Get returns full url by short url
 func (s *FileStorage) Get(key string) (ShortenedData, error) {
 	data, exists := s.inMemoryData.data[key]
 	if !exists {
@@ -70,6 +74,7 @@ func (s *FileStorage) Get(key string) (ShortenedData, error) {
 	return data, nil
 }
 
+// Save data to file storage
 func (s *FileStorage) Save() error {
 	file, err := os.OpenFile(s.filePath, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
@@ -95,14 +100,17 @@ func (s *FileStorage) Save() error {
 	return nil
 }
 
+// Ping return nil
 func (s *FileStorage) Ping() error {
 	return nil
 }
 
+// Close return nil if ok or error
 func (s *FileStorage) Close() error {
 	return s.Save()
 }
 
+// GetBatchByUserID returns batches of short urls by provided userID
 func (s *FileStorage) GetBatchByUserID(userID string) ([]ShortenedData, error) {
 	var data []ShortenedData
 	data = append(data, ShortenedData{})
@@ -110,6 +118,7 @@ func (s *FileStorage) GetBatchByUserID(userID string) ([]ShortenedData, error) {
 	return data, nil
 }
 
+// DeleteByUserIDAndShort return error
 func (s *FileStorage) DeleteByUserIDAndShort(userID string, shortURL string) error {
 	return errors.New("Error")
 }
