@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/gsk148/urlShorteningService/internal/app/logger"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/gsk148/urlShorteningService/internal/app/logger"
 	"github.com/gsk148/urlShorteningService/internal/app/storage"
 )
 

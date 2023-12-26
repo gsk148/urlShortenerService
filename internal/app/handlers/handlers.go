@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"strings"
 
-	"go.uber.org/zap"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
+
 	"github.com/gsk148/urlShorteningService/internal/app/api"
 	"github.com/gsk148/urlShorteningService/internal/app/auth"
 	"github.com/gsk148/urlShorteningService/internal/app/hashutil"

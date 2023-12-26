@@ -7,8 +7,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/gsk148/urlShorteningService/internal/app/compress"
 
+	"github.com/gsk148/urlShorteningService/internal/app/compress"
 	"github.com/gsk148/urlShorteningService/internal/app/config"
 	"github.com/gsk148/urlShorteningService/internal/app/handlers"
 	"github.com/gsk148/urlShorteningService/internal/app/logger"
