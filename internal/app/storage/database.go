@@ -9,17 +9,21 @@ import (
 	"go.uber.org/zap"
 )
 
+// ErrURLExists structure of special error
 type ErrURLExists struct{}
 
+// Error returns string message
 func (e *ErrURLExists) Error() string {
 	return "URL already exists"
 }
 
+// DBStorage structure of DBStorage
 type DBStorage struct {
 	DB     *sql.DB
 	logger zap.SugaredLogger
 }
 
+// NewDBStorage return DBStorage object
 func NewDBStorage(dsn string, logger zap.SugaredLogger) (*DBStorage, error) {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
@@ -48,6 +52,7 @@ func NewDBStorage(dsn string, logger zap.SugaredLogger) (*DBStorage, error) {
 	}, nil
 }
 
+// Ping ping db
 func (s *DBStorage) Ping() error {
 	if err := s.DB.PingContext(context.Background()); err != nil {
 		return err
@@ -55,6 +60,7 @@ func (s *DBStorage) Ping() error {
 	return nil
 }
 
+// Store saves data to DB and return error if already exists and short url if not
 func (s *DBStorage) Store(data ShortenedData) (ShortenedData, error) {
 	result, err := s.DB.ExecContext(context.Background(),
 		"INSERT INTO shortener (uuid, user_id, short_url, original_url, is_deleted) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (original_url) DO NOTHING",
@@ -82,6 +88,7 @@ func (s *DBStorage) Store(data ShortenedData) (ShortenedData, error) {
 	return data, nil
 }
 
+// Get returns full url by short url
 func (s *DBStorage) Get(key string) (ShortenedData, error) {
 	var (
 		uuid        string
@@ -110,10 +117,12 @@ func (s *DBStorage) Get(key string) (ShortenedData, error) {
 	}, nil
 }
 
+// Close return nil if ok or error
 func (s *DBStorage) Close() error {
 	return s.DB.Close()
 }
 
+// GetBatchByUserID returns batches of short urls by provided userID
 func (s *DBStorage) GetBatchByUserID(userID string) ([]ShortenedData, error) {
 	var (
 		entity ShortenedData
@@ -141,6 +150,7 @@ func (s *DBStorage) GetBatchByUserID(userID string) ([]ShortenedData, error) {
 	return result, nil
 }
 
+// DeleteByUserIDAndShort delete full url from db by userID and short url
 func (s *DBStorage) DeleteByUserIDAndShort(userID string, short string) error {
 	query := "UPDATE shortener SET is_deleted=true WHERE user_id=$1 AND short_url=$2"
 	rows, err := s.DB.Exec(query, userID, short)

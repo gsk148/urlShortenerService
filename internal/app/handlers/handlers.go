@@ -1,3 +1,4 @@
+// Package handlers contains public API handlers
 package handlers
 
 import (
@@ -7,22 +8,24 @@ import (
 	"net/http"
 	"strings"
 
-	"go.uber.org/zap"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
+
 	"github.com/gsk148/urlShorteningService/internal/app/api"
 	"github.com/gsk148/urlShorteningService/internal/app/auth"
 	"github.com/gsk148/urlShorteningService/internal/app/hashutil"
 	"github.com/gsk148/urlShorteningService/internal/app/storage"
 )
 
+// Handler structure of Handler
 type Handler struct {
 	ShortURLAddr string
 	Store        storage.Storage
 	Logger       zap.SugaredLogger
 }
 
+// ShortenerHandler save provided in text/plain format full url and returns short
 func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Not supported", http.StatusBadRequest)
@@ -44,6 +47,7 @@ func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
 	userID, err := auth.GetUserToken(w, r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	storedData, err := h.Store.Store(storage.ShortenedData{
@@ -75,6 +79,7 @@ func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// FindByShortLinkHandler returns full url by provided id
 func (h *Handler) FindByShortLinkHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Not supported", http.StatusBadRequest)
@@ -96,6 +101,7 @@ func (h *Handler) FindByShortLinkHandler(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
+// ShortenerAPIHandler save provided in json format full url and returns short
 func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 	if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		http.Error(w, "Not valid content type", http.StatusBadRequest)
@@ -158,6 +164,7 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// PingHandler makes test connection to storage
 func (h *Handler) PingHandler(res http.ResponseWriter, req *http.Request) {
 	if err := h.Store.Ping(); err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
@@ -166,6 +173,7 @@ func (h *Handler) PingHandler(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusOK)
 }
 
+// BatchShortenerAPIHandler saves array of provided urls
 func (h *Handler) BatchShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 	var reqItems []api.BatchShortenRequestItem
 	err := json.NewDecoder(r.Body).Decode(&reqItems)
@@ -216,6 +224,7 @@ func (h *Handler) BatchShortenerAPIHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// FindUserURLS returns array of all saved by user urls
 func (h *Handler) FindUserURLS(w http.ResponseWriter, r *http.Request) {
 	userID, err := auth.GetUserToken(w, r)
 	if err != nil {
@@ -254,6 +263,7 @@ func (h *Handler) FindUserURLS(w http.ResponseWriter, r *http.Request) {
 	w.Write(response)
 }
 
+// DeleteURLs removes array of provided urls
 func (h *Handler) DeleteURLs(w http.ResponseWriter, r *http.Request) {
 	var inputArray []string
 	userID, err := auth.GetUserToken(w, r)
@@ -279,6 +289,7 @@ func (h *Handler) DeleteURLs(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
+// MarkAsDeleted set flag deleted=true for provided short url
 func (h *Handler) MarkAsDeleted(inputShort chan string, userID string) {
 	for v := range inputShort {
 		err := h.Store.DeleteByUserIDAndShort(userID, v)

@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/gsk148/urlShorteningService/internal/app/logger"
 	"github.com/gsk148/urlShorteningService/internal/app/storage"
 )
 
@@ -46,9 +47,11 @@ func TestCreateShortLinkHandler(t *testing.T) {
 		},
 	}
 
+	myLog := logger.NewLogger()
 	h := &Handler{
 		ShortURLAddr: "http://localhost:8080",
 		Store:        storage.NewInMemoryStorage(),
+		Logger:       *myLog,
 	}
 
 	for _, test := range tests {
@@ -99,9 +102,11 @@ func TestFindByShortLinkHandler(t *testing.T) {
 		},
 	}
 
+	myLog := logger.NewLogger()
 	h := &Handler{
 		ShortURLAddr: "http://localhost:8080",
 		Store:        storage.NewInMemoryStorage(),
+		Logger:       *myLog,
 	}
 
 	for _, test := range tests {
@@ -158,9 +163,11 @@ func TestShorterApiHandler(t *testing.T) {
 		},
 	}
 
+	myLog := logger.NewLogger()
 	h := &Handler{
 		ShortURLAddr: "http://localhost:8080",
 		Store:        storage.NewInMemoryStorage(),
+		Logger:       *myLog,
 	}
 
 	for _, test := range tests {
@@ -170,6 +177,190 @@ func TestShorterApiHandler(t *testing.T) {
 			request.Header.Set("Content-Type", test.contentType)
 			w := httptest.NewRecorder()
 			h.ShortenerAPIHandler(w, request)
+
+			res := w.Result()
+			assert.Equal(t, test.want.code, res.StatusCode)
+			assert.Equal(t, test.want.contentType, res.Header.Get("content-type"))
+			defer res.Body.Close()
+		})
+	}
+}
+
+func TestPingHandler(t *testing.T) {
+	type want struct {
+		code        int
+		response    string
+		contentType string
+	}
+
+	tests := []struct {
+		name          string
+		requestMethod string
+		requestPath   string
+		want          want
+	}{
+		{
+			name:          "success ping test",
+			requestMethod: http.MethodGet,
+			requestPath:   "/ping",
+			want: want{
+				code:        200,
+				contentType: "",
+			},
+		},
+	}
+
+	myLog := logger.NewLogger()
+	h := &Handler{
+		ShortURLAddr: "http://localhost:8080",
+		Store:        storage.NewInMemoryStorage(),
+		Logger:       *myLog,
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(test.requestMethod, test.requestPath, nil)
+			// создаём новый Recorder
+			w := httptest.NewRecorder()
+			h.PingHandler(w, request)
+
+			res := w.Result()
+			assert.Equal(t, test.want.code, res.StatusCode)
+			assert.Equal(t, test.want.contentType, res.Header.Get("content-type"))
+			defer res.Body.Close()
+		})
+	}
+}
+
+func TestDeleteURLs(t *testing.T) {
+	type want struct {
+		code        int
+		response    string
+		contentType string
+	}
+
+	tests := []struct {
+		name          string
+		requestMethod string
+		requestPath   string
+		want          want
+	}{
+		{
+			name:          "failed delete urls test",
+			requestMethod: http.MethodDelete,
+			requestPath:   "/api/user/urls",
+			want: want{
+				code:        400,
+				contentType: "",
+			},
+		},
+	}
+
+	myLog := logger.NewLogger()
+	h := &Handler{
+		ShortURLAddr: "http://localhost:8080",
+		Store:        storage.NewInMemoryStorage(),
+		Logger:       *myLog,
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(test.requestMethod, test.requestPath, nil)
+			// создаём новый Recorder
+			w := httptest.NewRecorder()
+			h.DeleteURLs(w, request)
+
+			res := w.Result()
+			assert.Equal(t, test.want.code, res.StatusCode)
+			assert.Equal(t, test.want.contentType, res.Header.Get("content-type"))
+			defer res.Body.Close()
+		})
+	}
+}
+
+func TestBatchShortenerAPIHandler(t *testing.T) {
+	type want struct {
+		code        int
+		response    string
+		contentType string
+	}
+
+	tests := []struct {
+		name          string
+		requestMethod string
+		requestPath   string
+		want          want
+	}{
+		{
+			name:          "fail batch shortner api test",
+			requestMethod: http.MethodPost,
+			requestPath:   "/api/shorten/batch",
+			want: want{
+				code:        400,
+				contentType: "text/plain; charset=utf-8",
+			},
+		},
+	}
+
+	myLog := logger.NewLogger()
+	h := &Handler{
+		ShortURLAddr: "http://localhost:8080",
+		Store:        storage.NewInMemoryStorage(),
+		Logger:       *myLog,
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(test.requestMethod, test.requestPath, nil)
+			// создаём новый Recorder
+			w := httptest.NewRecorder()
+			h.BatchShortenerAPIHandler(w, request)
+
+			res := w.Result()
+			assert.Equal(t, test.want.code, res.StatusCode)
+			assert.Equal(t, test.want.contentType, res.Header.Get("content-type"))
+			defer res.Body.Close()
+		})
+	}
+}
+
+func TestFindUserURLS(t *testing.T) {
+	type want struct {
+		code        int
+		response    string
+		contentType string
+	}
+
+	tests := []struct {
+		name          string
+		requestMethod string
+		requestPath   string
+		want          want
+	}{
+		{
+			name:          "fail batch shortner api test",
+			requestMethod: http.MethodGet,
+			requestPath:   "/api/user/urls",
+			want: want{
+				code:        200,
+				contentType: "application/json",
+			},
+		},
+	}
+
+	myLog := logger.NewLogger()
+	h := &Handler{
+		ShortURLAddr: "http://localhost:8080",
+		Store:        storage.NewInMemoryStorage(),
+		Logger:       *myLog,
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(test.requestMethod, test.requestPath, nil)
+			// создаём новый Recorder
+			w := httptest.NewRecorder()
+			h.FindUserURLS(w, request)
 
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)

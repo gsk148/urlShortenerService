@@ -6,6 +6,7 @@ import (
 	"github.com/gsk148/urlShorteningService/internal/app/config"
 )
 
+// ShortenedData model for url info
 type ShortenedData struct {
 	UserID      string `json:"userID"`
 	UUID        string `json:"uuid"`
@@ -14,6 +15,7 @@ type ShortenedData struct {
 	IsDeleted   bool   `json:"is_deleted"`
 }
 
+// Storage interface with included needed methods
 type Storage interface {
 	Store(data ShortenedData) (ShortenedData, error)
 	Get(key string) (ShortenedData, error)
@@ -23,6 +25,7 @@ type Storage interface {
 	DeleteByUserIDAndShort(userID string, shortURL string) error
 }
 
+// NewStorage return NewStorage object
 func NewStorage(cfg config.Config, logger zap.SugaredLogger) (Storage, error) {
 	switch cfg.StorageType {
 	case "memory":

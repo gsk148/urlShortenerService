@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// Claims contains basic jwt.RegisteredClaims and UserID
 type Claims struct {
 	jwt.RegisteredClaims
 	UserID string
@@ -18,6 +19,7 @@ const TokenExp = time.Hour * 1
 const SecretKey = "secretKey"
 const CookieName = "token"
 
+// GetUserToken parses user token from incoming request and returns userID and err if exists
 func GetUserToken(w http.ResponseWriter, r *http.Request) (string, error) {
 	var (
 		cookie *http.Cookie
