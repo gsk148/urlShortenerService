@@ -1,3 +1,4 @@
+// go: build -ldflags "-X main.buildVersion=v1.0.1 -X 'main.buildDate=$(date +'%Y/%m/%d %H:%M:%S')' -X main.buildCommit=`git rev-parse HEAD`" cmd/shortener/main.go
 package main
 
 import (
@@ -5,8 +6,6 @@ import (
 	"log"
 	"net/http"
 	"net/http/pprof"
-	"os"
-	"text/template"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -19,40 +18,16 @@ import (
 )
 
 var (
-	buildVersion string
-	buildDate    string
-	buildCommit  string
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
 )
 
-// BuildData хранит в себе информацию о текущей версии, дате и значении коммита
-type BuildData struct {
-	BuildVersion string
-	BuildDate    string
-	BuildCommit  string
-}
-
-// Template - переменная, содержит в себе темплейт для stdout с информацией о текущей сборке
-const Template = `	Build version: {{if .BuildVersion}} {{.BuildVersion}} {{else}} N/A {{end}}
-	Build date: {{if .BuildDate}} {{.BuildDate}} {{else}} N/A {{end}}
-	Build commit: {{if .BuildCommit}} {{.BuildCommit}} {{else}} N/A {{end}}`
-
-func buildInfo() {
-	d := &BuildData{
-		BuildVersion: buildVersion,
-		BuildDate:    buildDate,
-		BuildCommit:  buildCommit,
-	}
-	t := template.Must(template.New("buildTags").Parse(Template))
-	err := t.Execute(os.Stdout, *d)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-
-		return
-	}
-}
-
 func main() {
-	buildInfo()
+	fmt.Println("Build version:", buildVersion)
+	fmt.Println("Build date:", buildDate)
+	fmt.Println("Build commit:", buildCommit)
+
 	cfg := config.Load()
 
 	myLog := logger.NewLogger()
