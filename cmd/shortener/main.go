@@ -1,6 +1,8 @@
+// go: build -ldflags "-X main.buildVersion=v1.0.1 -X 'main.buildDate=$(date +'%Y/%m/%d %H:%M:%S')' -X main.buildCommit=`git rev-parse HEAD`" cmd/shortener/main.go
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/pprof"
@@ -15,7 +17,17 @@ import (
 	"github.com/gsk148/urlShorteningService/internal/app/storage"
 )
 
+var (
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
+)
+
 func main() {
+	fmt.Println("Build version:", buildVersion)
+	fmt.Println("Build date:", buildDate)
+	fmt.Println("Build commit:", buildCommit)
+
 	cfg := config.Load()
 
 	myLog := logger.NewLogger()

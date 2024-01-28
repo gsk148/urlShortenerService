@@ -243,14 +243,26 @@ func TestDeleteURLs(t *testing.T) {
 		name          string
 		requestMethod string
 		requestPath   string
+		requestBody   string
 		want          want
 	}{
 		{
 			name:          "failed delete urls test",
 			requestMethod: http.MethodDelete,
 			requestPath:   "/api/user/urls",
+			requestBody:   "",
 			want: want{
 				code:        400,
+				contentType: "",
+			},
+		},
+		{
+			name:          "success delete urls test",
+			requestMethod: http.MethodDelete,
+			requestPath:   "/api/user/urls",
+			requestBody:   "[\"6qxTVvsy\", \"RTfd56hn\", \"Jlfd67ds\"]",
+			want: want{
+				code:        202,
 				contentType: "",
 			},
 		},
@@ -265,7 +277,7 @@ func TestDeleteURLs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(test.requestMethod, test.requestPath, nil)
+			request := httptest.NewRequest(test.requestMethod, test.requestPath, strings.NewReader(test.requestBody))
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
 			h.DeleteURLs(w, request)
@@ -289,15 +301,27 @@ func TestBatchShortenerAPIHandler(t *testing.T) {
 		name          string
 		requestMethod string
 		requestPath   string
+		requestBody   string
 		want          want
 	}{
 		{
 			name:          "fail batch shortner api test",
 			requestMethod: http.MethodPost,
 			requestPath:   "/api/shorten/batch",
+			requestBody:   "",
 			want: want{
 				code:        400,
 				contentType: "text/plain; charset=utf-8",
+			},
+		},
+		{
+			name:          "success batch shortner api test",
+			requestMethod: http.MethodPost,
+			requestPath:   "/api/shorten/batch",
+			requestBody:   "[{\"correlation_id\":\"first\",\"original_url\":\"https://ya.ru\"},{\"correlation_id\":\"second\",\"original_url\":\"https://rambler.ru\"}]",
+			want: want{
+				code:        201,
+				contentType: "application/json",
 			},
 		},
 	}
@@ -311,7 +335,7 @@ func TestBatchShortenerAPIHandler(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(test.requestMethod, test.requestPath, nil)
+			request := httptest.NewRequest(test.requestMethod, test.requestPath, strings.NewReader(test.requestBody))
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
 			h.BatchShortenerAPIHandler(w, request)
