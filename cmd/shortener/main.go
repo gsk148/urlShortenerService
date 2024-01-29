@@ -2,10 +2,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"net/http/pprof"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -23,11 +28,7 @@ var (
 	buildCommit  = "N/A"
 )
 
-func main() {
-	fmt.Println("Build version:", buildVersion)
-	fmt.Println("Build date:", buildDate)
-	fmt.Println("Build commit:", buildCommit)
-
+func runSrv() (*http.Server, error) {
 	cfg := config.Load()
 
 	myLog := logger.NewLogger()
@@ -82,13 +83,43 @@ func main() {
 	r.Handle("/debug/pprof/block", pprof.Handler("block"))
 	r.Handle("/debug/pprof/allocs", pprof.Handler("allocs"))
 
-	if cfg.EnableHTTPS {
-		err = http.ListenAndServeTLS(cfg.ServerAddr, "internal/app/cert/server.crt", "internal/app/cert/server.key", r)
-	} else {
-		err = http.ListenAndServe(cfg.ServerAddr, r)
+	srv := &http.Server{
+		Addr:    cfg.ServerAddr,
+		Handler: r,
 	}
 
+	if cfg.EnableHTTPS {
+		return srv, http.ListenAndServeTLS(cfg.ServerAddr, "internal/app/cert/server.crt", "internal/app/cert/server.key", r)
+	}
+	return srv, http.ListenAndServe(cfg.ServerAddr, r)
+}
+
+func main() {
+	fmt.Println("Build version:", buildVersion)
+	fmt.Println("Build date:", buildDate)
+	fmt.Println("Build commit:", buildCommit)
+
+	srv, err := runSrv()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to create HTTP server: %v", err)
+	}
+
+	sigint := make(chan os.Signal, 1)
+	signal.Notify(sigint, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("HTTP server ListenAndServe error: %v", err)
+		}
+	}()
+
+	sig := <-sigint
+	log.Printf("Received signal: %v", sig)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Printf("HTTP server Shutdown error: %v", err)
 	}
 }
