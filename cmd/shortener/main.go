@@ -82,7 +82,7 @@ func main() {
 	r.Handle("/debug/pprof/block", pprof.Handler("block"))
 	r.Handle("/debug/pprof/allocs", pprof.Handler("allocs"))
 
-	if cfg.EnableHTTPS != "" {
+	if cfg.EnableHTTPS {
 		err = http.ListenAndServeTLS(cfg.ServerAddr, "internal/app/cert/server.crt", "internal/app/cert/server.key", r)
 	} else {
 		err = http.ListenAndServe(cfg.ServerAddr, r)
