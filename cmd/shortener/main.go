@@ -38,9 +38,9 @@ func runSrv() (*http.Server, error) {
 	}
 
 	h := &handlers.Handler{
-		ShortURLAddr: cfg.ShortURLAddr,
-		Store:        store,
-		Logger:       *myLog,
+		BaseURL: cfg.BaseURL,
+		Store:   store,
+		Logger:  *myLog,
 	}
 
 	r := chi.NewRouter()

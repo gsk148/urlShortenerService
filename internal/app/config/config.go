@@ -9,7 +9,7 @@ import (
 // Config contains environment variables which should be set
 type Config struct {
 	ServerAddr      string `json:"server_address"`
-	ShortURLAddr    string `json:"base_url"`
+	BaseURL         string `json:"base_url"`
 	FileStoragePath string `json:"file_storage_path"`
 	DatabaseDSN     string `json:"database_dsn"`
 	EnableHTTPS     bool   `json:"enable_https" env:"ENABLE_HTTPS" envDefault:"false"`
@@ -21,7 +21,7 @@ type Config struct {
 func Load() *Config {
 	cfg := &Config{}
 	flag.StringVar(&cfg.ServerAddr, "a", "localhost:8080", "The starting server address (format: host:port)")
-	flag.StringVar(&cfg.ShortURLAddr, "b", "http://localhost:8080", "Returned address: net address host:port")
+	flag.StringVar(&cfg.BaseURL, "b", "http://localhost:8080", "Returned address: net address host:port")
 	flag.StringVar(&cfg.StorageType, "storage", "file", "type of storage to use (memory/file)")
 	flag.StringVar(&cfg.FileStoragePath, "f", "/tmp/short-url-db.json", "File storage path")
 	flag.StringVar(&cfg.DatabaseDSN, "d", "", "Database host")
@@ -33,7 +33,7 @@ func Load() *Config {
 		cfg.ServerAddr = envRunAddr
 	}
 	if envBaseAddr := os.Getenv("BASE_URL"); envBaseAddr != "" {
-		cfg.ShortURLAddr = envBaseAddr
+		cfg.BaseURL = envBaseAddr
 	}
 	if envStorageType := os.Getenv("STORAGE_TYPE"); envStorageType != "" {
 		cfg.StorageType = envStorageType
@@ -65,8 +65,8 @@ func Load() *Config {
 	if cfg.ServerAddr == "" {
 		cfg.ServerAddr = jsonCfg.ServerAddr
 	}
-	if cfg.ShortURLAddr == "" {
-		cfg.ShortURLAddr = jsonCfg.ShortURLAddr
+	if cfg.BaseURL == "" {
+		cfg.BaseURL = jsonCfg.BaseURL
 	}
 	if cfg.FileStoragePath == "" {
 		cfg.FileStoragePath = jsonCfg.FileStoragePath
