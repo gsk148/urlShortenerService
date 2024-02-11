@@ -20,9 +20,9 @@ import (
 
 // Handler structure of Handler
 type Handler struct {
-	ShortURLAddr string
-	Store        storage.Storage
-	Logger       zap.SugaredLogger
+	BaseURL string
+	Store   storage.Storage
+	Logger  zap.SugaredLogger
 }
 
 // ShortenerHandler save provided in text/plain format full url and returns short
@@ -60,7 +60,7 @@ func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, &storage.ErrURLExists{}) {
 			w.Header().Set("content-type", "text/plain")
 			w.WriteHeader(http.StatusConflict)
-			url := h.ShortURLAddr + "/" + storedData.ShortURL
+			url := h.BaseURL + "/" + storedData.ShortURL
 			_, err = w.Write([]byte(url))
 			if err != nil {
 				http.Error(w, "Failed to write response", http.StatusInternalServerError)
@@ -71,7 +71,7 @@ func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("content-type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
-	url := h.ShortURLAddr + "/" + encoded
+	url := h.BaseURL + "/" + encoded
 	_, err = w.Write([]byte(url))
 	if err != nil {
 		http.Error(w, "Failed to write response", http.StatusInternalServerError)
@@ -122,7 +122,7 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 
 	encoded := hashutil.Encode([]byte(request.URL))
 	var response api.ShortenResponse
-	response.Result = h.ShortURLAddr + "/" + encoded
+	response.Result = h.BaseURL + "/" + encoded
 	result, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, "Marshaling response failed", http.StatusBadRequest)
@@ -206,7 +206,7 @@ func (h *Handler) BatchShortenerAPIHandler(w http.ResponseWriter, r *http.Reques
 
 		respItems = append(respItems, api.BatchShortenResponseItem{
 			CorrelationID: reqItem.CorrelationID,
-			ShortURL:      h.ShortURLAddr + "/" + shortURL,
+			ShortURL:      h.BaseURL + "/" + shortURL,
 		})
 	}
 
@@ -249,7 +249,7 @@ func (h *Handler) FindUserURLS(w http.ResponseWriter, r *http.Request) {
 	var result []UserLinksResponse
 
 	for _, v := range batch {
-		shortURL := h.ShortURLAddr + "/" + v.ShortURL
+		shortURL := h.BaseURL + "/" + v.ShortURL
 		b := &UserLinksResponse{shortURL, v.OriginalURL}
 		result = append(result, *b)
 	}
