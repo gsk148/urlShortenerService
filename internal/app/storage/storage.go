@@ -3,6 +3,7 @@ package storage
 import (
 	"go.uber.org/zap"
 
+	"github.com/gsk148/urlShorteningService/internal/app/api"
 	"github.com/gsk148/urlShorteningService/internal/app/config"
 )
 
@@ -23,6 +24,7 @@ type Storage interface {
 	Close() error
 	GetBatchByUserID(userID string) ([]ShortenedData, error)
 	DeleteByUserIDAndShort(userID string, shortURL string) error
+	GetStatistic() *api.Statistic
 }
 
 // NewStorage return NewStorage object

@@ -21,3 +21,9 @@ type BatchShortenResponseItem struct {
 	CorrelationID string `json:"correlation_id"`
 	ShortURL      string `json:"short_url"`
 }
+
+// Statistic model for statistic response
+type Statistic struct {
+	URLs  int `json:"urls"`
+	Users int `json:"users"`
+}

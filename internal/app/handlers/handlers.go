@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 
@@ -20,9 +21,10 @@ import (
 
 // Handler structure of Handler
 type Handler struct {
-	BaseURL string
-	Store   storage.Storage
-	Logger  zap.SugaredLogger
+	BaseURL       string
+	TrustedSubnet string
+	Store         storage.Storage
+	Logger        zap.SugaredLogger
 }
 
 // ShortenerHandler save provided in text/plain format full url and returns short
@@ -297,6 +299,57 @@ func (h *Handler) MarkAsDeleted(inputShort chan string, userID string) {
 			h.Logger.Warnf("Failed to mark deleted by short %s", v)
 		}
 	}
+}
+
+// GetStats returns count of urls and users
+func (h *Handler) GetStats(w http.ResponseWriter, r *http.Request) {
+	realIP := r.Header.Get("X-Real-IP")
+	if realIP == "" {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	isTrusted, err := h.checkIPisTrusted(realIP)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if !isTrusted {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	stat := h.Store.GetStatistic()
+	if stat == nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	resp, err := json.Marshal(stat)
+	if err != nil {
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(resp)
+}
+
+func (h *Handler) checkIPisTrusted(clientIP string) (bool, error) {
+	_, trustedIP, err := net.ParseCIDR(h.TrustedSubnet)
+	if err != nil {
+		return false, err
+	}
+
+	parsedIP := net.ParseIP(clientIP)
+	if parsedIP == nil {
+		return false, err
+	}
+
+	if !trustedIP.Contains(parsedIP) {
+		return false, nil
+	}
+	return true, nil
 }
 
 func addShortURLs(input []string) chan string {

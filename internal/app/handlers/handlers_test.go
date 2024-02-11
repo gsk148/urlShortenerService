@@ -49,9 +49,10 @@ func TestCreateShortLinkHandler(t *testing.T) {
 
 	myLog := logger.NewLogger()
 	h := &Handler{
-		BaseURL: "http://localhost:8080",
-		Store:   storage.NewInMemoryStorage(),
-		Logger:  *myLog,
+		BaseURL:       "http://localhost:8080",
+		TrustedSubnet: "",
+		Store:         storage.NewInMemoryStorage(),
+		Logger:        *myLog,
 	}
 
 	for _, test := range tests {
@@ -104,9 +105,10 @@ func TestFindByShortLinkHandler(t *testing.T) {
 
 	myLog := logger.NewLogger()
 	h := &Handler{
-		BaseURL: "http://localhost:8080",
-		Store:   storage.NewInMemoryStorage(),
-		Logger:  *myLog,
+		BaseURL:       "http://localhost:8080",
+		TrustedSubnet: "",
+		Store:         storage.NewInMemoryStorage(),
+		Logger:        *myLog,
 	}
 
 	for _, test := range tests {
@@ -165,9 +167,10 @@ func TestShorterApiHandler(t *testing.T) {
 
 	myLog := logger.NewLogger()
 	h := &Handler{
-		BaseURL: "http://localhost:8080",
-		Store:   storage.NewInMemoryStorage(),
-		Logger:  *myLog,
+		BaseURL:       "http://localhost:8080",
+		TrustedSubnet: "",
+		Store:         storage.NewInMemoryStorage(),
+		Logger:        *myLog,
 	}
 
 	for _, test := range tests {
@@ -212,9 +215,10 @@ func TestPingHandler(t *testing.T) {
 
 	myLog := logger.NewLogger()
 	h := &Handler{
-		BaseURL: "http://localhost:8080",
-		Store:   storage.NewInMemoryStorage(),
-		Logger:  *myLog,
+		BaseURL:       "http://localhost:8080",
+		TrustedSubnet: "",
+		Store:         storage.NewInMemoryStorage(),
+		Logger:        *myLog,
 	}
 
 	for _, test := range tests {
@@ -270,9 +274,10 @@ func TestDeleteURLs(t *testing.T) {
 
 	myLog := logger.NewLogger()
 	h := &Handler{
-		BaseURL: "http://localhost:8080",
-		Store:   storage.NewInMemoryStorage(),
-		Logger:  *myLog,
+		BaseURL:       "http://localhost:8080",
+		TrustedSubnet: "",
+		Store:         storage.NewInMemoryStorage(),
+		Logger:        *myLog,
 	}
 
 	for _, test := range tests {
@@ -328,9 +333,10 @@ func TestBatchShortenerAPIHandler(t *testing.T) {
 
 	myLog := logger.NewLogger()
 	h := &Handler{
-		BaseURL: "http://localhost:8080",
-		Store:   storage.NewInMemoryStorage(),
-		Logger:  *myLog,
+		BaseURL:       "http://localhost:8080",
+		TrustedSubnet: "",
+		Store:         storage.NewInMemoryStorage(),
+		Logger:        *myLog,
 	}
 
 	for _, test := range tests {
@@ -374,9 +380,10 @@ func TestFindUserURLS(t *testing.T) {
 
 	myLog := logger.NewLogger()
 	h := &Handler{
-		BaseURL: "http://localhost:8080",
-		Store:   storage.NewInMemoryStorage(),
-		Logger:  *myLog,
+		BaseURL:       "http://localhost:8080",
+		TrustedSubnet: "",
+		Store:         storage.NewInMemoryStorage(),
+		Logger:        *myLog,
 	}
 
 	for _, test := range tests {

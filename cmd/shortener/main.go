@@ -38,9 +38,10 @@ func runSrv() (*http.Server, error) {
 	}
 
 	h := &handlers.Handler{
-		BaseURL: cfg.BaseURL,
-		Store:   store,
-		Logger:  *myLog,
+		BaseURL:       cfg.BaseURL,
+		TrustedSubnet: cfg.TrustedSubnet,
+		Store:         store,
+		Logger:        *myLog,
 	}
 
 	r := chi.NewRouter()
@@ -66,6 +67,7 @@ func runSrv() (*http.Server, error) {
 	r.Post("/", h.ShortenerHandler)
 	r.Get("/{id}", h.FindByShortLinkHandler)
 	r.Get("/ping", h.PingHandler)
+	r.Get("/api/internal/stats", h.GetStats)
 
 	r.HandleFunc("/debug/pprof", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, r.URL.Path[1:])

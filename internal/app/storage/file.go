@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+
+	"github.com/gsk148/urlShorteningService/internal/app/api"
 )
 
 // FileStorage structure of FileStorage
@@ -121,4 +123,9 @@ func (s *FileStorage) GetBatchByUserID(userID string) ([]ShortenedData, error) {
 // DeleteByUserIDAndShort return error
 func (s *FileStorage) DeleteByUserIDAndShort(userID string, shortURL string) error {
 	return errors.New("Error")
+}
+
+// GetStatistic - returns num of saved urls and users
+func (s *FileStorage) GetStatistic() *api.Statistic {
+	return nil
 }

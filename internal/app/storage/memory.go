@@ -2,6 +2,8 @@ package storage
 
 import (
 	"errors"
+
+	"github.com/gsk148/urlShorteningService/internal/app/api"
 )
 
 // InMemoryStorage structure of InMemoryStorage
@@ -52,4 +54,9 @@ func (s *InMemoryStorage) GetBatchByUserID(userID string) ([]ShortenedData, erro
 // DeleteByUserIDAndShort return error
 func (s *InMemoryStorage) DeleteByUserIDAndShort(userID string, shortURL string) error {
 	return errors.New("Error")
+}
+
+// GetStatistic - return num of saved urls and users
+func (s *InMemoryStorage) GetStatistic() *api.Statistic {
+	return nil
 }
