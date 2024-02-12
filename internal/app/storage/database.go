@@ -63,26 +63,26 @@ func (s *DBStorage) Ping() error {
 }
 
 // Store saves data to DB and return error if already exists and short url if not
-func (s *DBStorage) Store(data ShortenedData) (ShortenedData, error) {
+func (s *DBStorage) Store(data api.ShortenedData) (api.ShortenedData, error) {
 	result, err := s.DB.ExecContext(context.Background(),
 		"INSERT INTO shortener (uuid, user_id, short_url, original_url, is_deleted) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (original_url) DO NOTHING",
 		data.UUID, data.UserID, data.ShortURL, data.OriginalURL, data.IsDeleted)
 	if err != nil {
-		return ShortenedData{}, err
+		return api.ShortenedData{}, err
 	}
 
 	affectedRows, err := result.RowsAffected()
 	if err != nil {
-		return ShortenedData{}, err
+		return api.ShortenedData{}, err
 	}
 
 	if affectedRows == 0 {
 		row := s.DB.QueryRowContext(context.Background(),
 			"SELECT uuid, user_id, short_url, original_url FROM shortener WHERE original_url = $1", data.OriginalURL)
-		var existingData ShortenedData
+		var existingData api.ShortenedData
 		err := row.Scan(&existingData.UUID, &existingData.UserID, &existingData.ShortURL, &existingData.OriginalURL)
 		if err != nil {
-			return ShortenedData{}, err
+			return api.ShortenedData{}, err
 		}
 		return existingData, &ErrURLExists{}
 	}
@@ -91,7 +91,7 @@ func (s *DBStorage) Store(data ShortenedData) (ShortenedData, error) {
 }
 
 // Get returns full url by short url
-func (s *DBStorage) Get(key string) (ShortenedData, error) {
+func (s *DBStorage) Get(key string) (api.ShortenedData, error) {
 	var (
 		uuid        string
 		userID      string
@@ -105,12 +105,12 @@ func (s *DBStorage) Get(key string) (ShortenedData, error) {
 	err := row.Scan(&uuid, &userID, &shortURL, &originalURL, &isDeleted)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return ShortenedData{}, errors.New("key not found: " + key)
+			return api.ShortenedData{}, errors.New("key not found: " + key)
 		} else {
-			return ShortenedData{}, err
+			return api.ShortenedData{}, err
 		}
 	}
-	return ShortenedData{
+	return api.ShortenedData{
 		UserID:      userID,
 		UUID:        uuid,
 		ShortURL:    shortURL,
@@ -125,10 +125,10 @@ func (s *DBStorage) Close() error {
 }
 
 // GetBatchByUserID returns batches of short urls by provided userID
-func (s *DBStorage) GetBatchByUserID(userID string) ([]ShortenedData, error) {
+func (s *DBStorage) GetBatchByUserID(userID string) ([]api.ShortenedData, error) {
 	var (
-		entity ShortenedData
-		result []ShortenedData
+		entity api.ShortenedData
+		result []api.ShortenedData
 	)
 	query := "select short_url, original_url from shortener where user_id=$1"
 	rows, err := s.DB.Query(query, userID)

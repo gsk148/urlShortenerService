@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "internal/proto";
+
+
+message URLInfo {
+  string uuid = 1;
+  string userID = 2;
+  string correlation_id = 3;
+  string original_url = 4;
+  string short_url = 5;
+  bool is_deleted = 6;
+}
+
+message BatchShortenAPIRequest {
+  repeated URLInfo entities = 1;
+}
+
+
+message BatchShortenAPIResponse {
+  repeated URLInfo entities = 1;
+}
+
+message DeleteURLsRequest {
+  repeated string short_url = 1;
+}
+
+message DeleteURLsResponse {
+}
+
+message FindByShortLinkRequest {
+  string short_url = 1;
+}
+
+message FindByShortLinkResponse {
+  string original_url = 1;
+}
+
+message FindUserURLSRequest {}
+
+message GetStatisticRequest {}
+
+message GetStatisticResponse {
+  int32 urls = 1;
+  int32 users = 2;
+}
+
+message PingRequest{}
+
+message PingResponse{}
+
+message ShortenAPIRequest {
+  string url = 1;
+}
+
+message ShortenAPIResponse {
+  string result = 1;
+}
+
+message ShortenRequest {
+  string original_url = 1;
+}
+
+message ShortenResponse {
+  string short_url = 1;
+}
+
+service ShortenerService {
+  rpc BatchShortenAPI(BatchShortenAPIRequest) returns (BatchShortenAPIResponse);
+  rpc DeleteURLs(DeleteURLsRequest) returns (DeleteURLsResponse);
+  rpc FindByShortLink(FindByShortLinkRequest) returns (URLInfo);
+  rpc FindUserURLS(FindUserURLSRequest) returns (BatchShortenAPIResponse);
+  rpc GetStats(GetStatisticRequest) returns (GetStatisticResponse);
+  rpc Ping(PingRequest) returns (PingResponse);
+  rpc ShortenAPI(ShortenAPIRequest) returns (ShortenAPIResponse);
+  rpc Shorten(ShortenRequest) returns (ShortenResponse);
+}

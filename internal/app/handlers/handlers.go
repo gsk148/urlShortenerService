@@ -52,7 +52,7 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	storedData, err := h.Store.Store(storage.ShortenedData{
+	storedData, err := h.Store.Store(api.ShortenedData{
 		UserID:      userID,
 		UUID:        uuid.New().String(),
 		ShortURL:    encoded,
@@ -136,7 +136,7 @@ func (h *Handler) ShortenAPI(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	}
 
-	_, err = h.Store.Store(storage.ShortenedData{
+	_, err = h.Store.Store(api.ShortenedData{
 		UserID:      userID,
 		UUID:        uuid.New().String(),
 		ShortURL:    encoded,
@@ -194,7 +194,7 @@ func (h *Handler) BatchShortenAPI(w http.ResponseWriter, r *http.Request) {
 	for _, reqItem := range reqItems {
 		shortURL := hashutil.Encode([]byte(reqItem.OriginalURL))
 
-		_, err := h.Store.Store(storage.ShortenedData{
+		_, err := h.Store.Store(api.ShortenedData{
 			UserID:      userID,
 			UUID:        uuid.New().String(),
 			ShortURL:    shortURL,

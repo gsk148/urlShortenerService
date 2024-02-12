@@ -8,27 +8,27 @@ import (
 
 // InMemoryStorage structure of InMemoryStorage
 type InMemoryStorage struct {
-	data map[string]ShortenedData
+	data map[string]api.ShortenedData
 }
 
 // NewInMemoryStorage return NewInMemoryStorage object
 func NewInMemoryStorage() *InMemoryStorage {
 	return &InMemoryStorage{
-		data: make(map[string]ShortenedData),
+		data: make(map[string]api.ShortenedData),
 	}
 }
 
 // Store data and return error if already exists and short url if not
-func (s *InMemoryStorage) Store(data ShortenedData) (ShortenedData, error) {
+func (s *InMemoryStorage) Store(data api.ShortenedData) (api.ShortenedData, error) {
 	s.data[data.ShortURL] = data
-	return ShortenedData{}, nil
+	return api.ShortenedData{}, nil
 }
 
 // Get returns full url by short url
-func (s *InMemoryStorage) Get(key string) (ShortenedData, error) {
+func (s *InMemoryStorage) Get(key string) (api.ShortenedData, error) {
 	value, exists := s.data[key]
 	if !exists {
-		return ShortenedData{}, errors.New("key not found: " + key)
+		return api.ShortenedData{}, errors.New("key not found: " + key)
 	}
 	return value, nil
 }
@@ -44,9 +44,9 @@ func (s *InMemoryStorage) Close() error {
 }
 
 // GetBatchByUserID returns batches of short urls by provided userID
-func (s *InMemoryStorage) GetBatchByUserID(userID string) ([]ShortenedData, error) {
-	var data []ShortenedData
-	data = append(data, ShortenedData{})
+func (s *InMemoryStorage) GetBatchByUserID(userID string) ([]api.ShortenedData, error) {
+	var data []api.ShortenedData
+	data = append(data, api.ShortenedData{})
 
 	return data, nil
 }
