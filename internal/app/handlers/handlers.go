@@ -27,8 +27,8 @@ type Handler struct {
 	Logger        zap.SugaredLogger
 }
 
-// ShortenerHandler save provided in text/plain format full url and returns short
-func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
+// Shorten save provided in text/plain format full url and returns short
+func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Not supported", http.StatusBadRequest)
 		return
@@ -81,8 +81,8 @@ func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// FindByShortLinkHandler returns full url by provided id
-func (h *Handler) FindByShortLinkHandler(w http.ResponseWriter, r *http.Request) {
+// FindByShortLink returns full url by provided id
+func (h *Handler) FindByShortLink(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Not supported", http.StatusBadRequest)
 		return
@@ -103,8 +103,8 @@ func (h *Handler) FindByShortLinkHandler(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-// ShortenerAPIHandler save provided in json format full url and returns short
-func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
+// ShortenAPI save provided in json format full url and returns short
+func (h *Handler) ShortenAPI(w http.ResponseWriter, r *http.Request) {
 	if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		http.Error(w, "Not valid content type", http.StatusBadRequest)
 	}
@@ -166,8 +166,8 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// PingHandler makes test connection to storage
-func (h *Handler) PingHandler(res http.ResponseWriter, req *http.Request) {
+// Ping makes test connection to storage
+func (h *Handler) Ping(res http.ResponseWriter, req *http.Request) {
 	if err := h.Store.Ping(); err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
 		return
@@ -175,8 +175,8 @@ func (h *Handler) PingHandler(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusOK)
 }
 
-// BatchShortenerAPIHandler saves array of provided urls
-func (h *Handler) BatchShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
+// BatchShortenAPI saves array of provided urls
+func (h *Handler) BatchShortenAPI(w http.ResponseWriter, r *http.Request) {
 	var reqItems []api.BatchShortenRequestItem
 	err := json.NewDecoder(r.Body).Decode(&reqItems)
 	if err != nil {

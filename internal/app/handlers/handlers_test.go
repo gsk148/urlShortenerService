@@ -60,7 +60,7 @@ func TestCreateShortLinkHandler(t *testing.T) {
 			request := httptest.NewRequest(test.requestMethod, test.requestPath, strings.NewReader("https://practicum.yandex.ru/"))
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
-			h.ShortenerHandler(w, request)
+			h.Shorten(w, request)
 
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
@@ -116,7 +116,7 @@ func TestFindByShortLinkHandler(t *testing.T) {
 			request := httptest.NewRequest(test.requestMethod, test.requestPath, nil)
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
-			h.FindByShortLinkHandler(w, request)
+			h.FindByShortLink(w, request)
 
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
@@ -179,7 +179,7 @@ func TestShorterApiHandler(t *testing.T) {
 			request := httptest.NewRequest(test.requestMethod, test.requestPath, bytes.NewBuffer(body))
 			request.Header.Set("Content-Type", test.contentType)
 			w := httptest.NewRecorder()
-			h.ShortenerAPIHandler(w, request)
+			h.ShortenAPI(w, request)
 
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
@@ -226,7 +226,7 @@ func TestPingHandler(t *testing.T) {
 			request := httptest.NewRequest(test.requestMethod, test.requestPath, nil)
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
-			h.PingHandler(w, request)
+			h.Ping(w, request)
 
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
@@ -344,7 +344,7 @@ func TestBatchShortenerAPIHandler(t *testing.T) {
 			request := httptest.NewRequest(test.requestMethod, test.requestPath, strings.NewReader(test.requestBody))
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
-			h.BatchShortenerAPIHandler(w, request)
+			h.BatchShortenAPI(w, request)
 
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)

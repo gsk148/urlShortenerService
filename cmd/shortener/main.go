@@ -58,15 +58,15 @@ func runSrv() (*http.Server, error) {
 
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.AllowContentType("application/json"))
-		r.Post("/api/shorten", h.ShortenerAPIHandler)
-		r.Post("/api/shorten/batch", h.BatchShortenerAPIHandler)
+		r.Post("/api/shorten", h.ShortenAPI)
+		r.Post("/api/shorten/batch", h.BatchShortenAPI)
 		r.Get("/api/user/urls", h.FindUserURLS)
 		r.Delete("/api/user/urls", h.DeleteURLs)
 	})
 
-	r.Post("/", h.ShortenerHandler)
-	r.Get("/{id}", h.FindByShortLinkHandler)
-	r.Get("/ping", h.PingHandler)
+	r.Post("/", h.Shorten)
+	r.Get("/{id}", h.FindByShortLink)
+	r.Get("/ping", h.Ping)
 	r.Get("/api/internal/stats", h.GetStats)
 
 	r.HandleFunc("/debug/pprof", func(w http.ResponseWriter, r *http.Request) {
