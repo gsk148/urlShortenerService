@@ -47,6 +47,7 @@ func (s *ShortenerService) BatchShortenAPI(ctx context.Context, in *pb.BatchShor
 	resp.Entities = modelURLInfoToProto(result)
 	return &resp, nil
 }
+
 func (s *ShortenerService) DeleteURLs(ctx context.Context, in *pb.DeleteURLsRequest) (*pb.DeleteURLsResponse, error) {
 	var resp pb.DeleteURLsResponse
 	urls := in.GetShortUrl()
@@ -63,6 +64,7 @@ func (s *ShortenerService) DeleteURLs(ctx context.Context, in *pb.DeleteURLsRequ
 	}
 	return &resp, nil
 }
+
 func (s *ShortenerService) FindByShortLink(ctx context.Context, in *pb.FindByShortLinkRequest) (*pb.URLInfo, error) {
 	var resp pb.URLInfo
 	url := in.GetShortUrl()
@@ -98,6 +100,7 @@ func (s *ShortenerService) GetStats(context.Context, *pb.GetStatisticRequest) (*
 	resp.Users = int32(stat.Users)
 	return &resp, nil
 }
+
 func (s *ShortenerService) Ping(context.Context, *pb.PingRequest) (*pb.PingResponse, error) {
 	err := s.strg.Ping()
 	return &pb.PingResponse{}, err
