@@ -1,4 +1,4 @@
-package grpc
+package main
 
 import (
 	"context"
@@ -15,6 +15,7 @@ import (
 
 	"github.com/gsk148/urlShorteningService/internal/app/api"
 	"github.com/gsk148/urlShorteningService/internal/app/config"
+	"github.com/gsk148/urlShorteningService/internal/app/hashutil"
 	"github.com/gsk148/urlShorteningService/internal/app/logger"
 	pb "github.com/gsk148/urlShorteningService/internal/app/proto"
 	"github.com/gsk148/urlShorteningService/internal/app/storage"
@@ -79,20 +80,21 @@ func (s *ShortenerService) FindByShortLink(ctx context.Context, in *pb.FindBySho
 	return &resp, nil
 }
 
-//	func (s *ShortenerService) FindUserURLS(ctx context.Context, in *pb.FindUserURLSRequest) (*pb.BatchShortenAPIResponse, error) {
-//		var resp pb.BatchShortenAPIResponse
-//		userID, err := getUserIDFromMD(ctx)
-//		if err != nil {
-//			return nil, status.Error(codes.InvalidArgument, "no userID in metadata")
-//		}
-//		result, err := s.strg.GetBatchByUserID(userID)
-//		if err != nil {
-//			return nil, status.Error(codes.DataLoss, "error while get urls in storage")
-//		}
-//		urls := modelURLInfoToProto(result)
-//		resp.Entities = urls
-//		return &resp, nil
-//	}
+func (s *ShortenerService) FindUserURLS(ctx context.Context, in *pb.FindUserURLSRequest) (*pb.BatchShortenAPIResponse, error) {
+	var resp pb.BatchShortenAPIResponse
+	userID, err := getUserIDFromMD(ctx)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "no userID in metadata")
+	}
+	results, err := s.strg.GetBatchByUserID(userID)
+	if err != nil {
+		return nil, status.Error(codes.DataLoss, "error while get urls in storage")
+	}
+	urls := modelShortenedDataToProto(results)
+	resp.Entities = urls
+	return &resp, nil
+}
+
 func (s *ShortenerService) GetStats(context.Context, *pb.GetStatisticRequest) (*pb.GetStatisticResponse, error) {
 	var resp pb.GetStatisticResponse
 	stat := s.strg.GetStatistic()
@@ -106,40 +108,61 @@ func (s *ShortenerService) Ping(context.Context, *pb.PingRequest) (*pb.PingRespo
 	return &pb.PingResponse{}, err
 }
 
-//func (s *ShortenerService) ShortenAPI(ctx context.Context, in *pb.ShortenAPIRequest) (*pb.ShortenAPIResponse, error) {
-//	var resp pb.ShortenAPIResponse
-//	userID, err := getUserIDFromMD(ctx)
-//	if err != nil {
-//		return nil, status.Error(codes.InvalidArgument, "no userID in metadata")
-//	}
-//
-//	longURL := in.GetUrl()
-//	res, err := s.strg.Store(userID, longURL)
-//	if err != nil {
-//		return nil, status.Error(codes.DataLoss, "error while post long url in storage")
-//	}
-//	resp.Result = res.ShortURL
-//	return &resp, nil
-//}
+func (s *ShortenerService) ShortenAPI(ctx context.Context, in *pb.ShortenAPIRequest) (*pb.ShortenAPIResponse, error) {
+	var resp pb.ShortenAPIResponse
+	userID, err := getUserIDFromMD(ctx)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "no userID in metadata")
+	}
 
-//func (s *ShortenerService) Shorten(ctx context.Context, in *pb.ShortenRequest) (*pb.ShortenResponse, error) {
-//	resp := pb.ShortenResponse{}
-//	url := in.GetOriginalUrl()
-//	userID, err := getUserIDFromMD(ctx)
-//	if err != nil {
-//		return nil, status.Error(codes.InvalidArgument, "no userID in metadata")
-//	}
-//
-//	if url == "" {
-//		return nil, status.Error(codes.InvalidArgument, "no url in request")
-//	}
-//	short, err := s.strg.Store(userID, url)
-//	if err != nil {
-//		return nil, status.Error(codes.DataLoss, "error while post long url in storage")
-//	}
-//	resp.ShortUrl = short.ShortURL
-//	return &resp, nil
-//}
+	originUrl := in.GetUrl()
+	shortURL := hashutil.Encode([]byte(originUrl))
+
+	shortenedData := api.ShortenedData{
+		UserID:      userID,
+		UUID:        uuid.New().String(),
+		ShortURL:    shortURL,
+		OriginalURL: originUrl,
+		IsDeleted:   false,
+	}
+
+	res, err := s.strg.Store(shortenedData)
+	if err != nil {
+		return nil, status.Error(codes.DataLoss, "error while post long url in storage")
+	}
+	resp.Result = res.ShortURL
+	return &resp, nil
+}
+
+func (s *ShortenerService) Shorten(ctx context.Context, in *pb.ShortenRequest) (*pb.ShortenResponse, error) {
+	resp := pb.ShortenResponse{}
+	url := in.GetOriginalUrl()
+	userID, err := getUserIDFromMD(ctx)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "no userID in metadata")
+	}
+
+	if url == "" {
+		return nil, status.Error(codes.InvalidArgument, "no url in request")
+	}
+
+	shortURL := hashutil.Encode([]byte(url))
+
+	shortenedData := api.ShortenedData{
+		UserID:      userID,
+		UUID:        uuid.New().String(),
+		ShortURL:    shortURL,
+		OriginalURL: url,
+		IsDeleted:   false,
+	}
+
+	short, err := s.strg.Store(shortenedData)
+	if err != nil {
+		return nil, status.Error(codes.DataLoss, "error while post long url in storage")
+	}
+	resp.ShortUrl = short.ShortURL
+	return &resp, nil
+}
 
 func main() {
 	cfg := config.Load()
@@ -189,6 +212,22 @@ func modelURLInfoToProto(urls []api.URLInfo) []*pb.URLInfo {
 			Uuid:          v.UUID,
 			UserID:        v.UserID,
 			CorrelationId: v.CorrelationID,
+			OriginalUrl:   v.OriginalURL,
+			ShortUrl:      v.ShortURL,
+			IsDeleted:     v.IsDeleted,
+		}
+		convertedURLS = append(convertedURLS, &newURL)
+	}
+	return convertedURLS
+}
+
+func modelShortenedDataToProto(urls []api.ShortenedData) []*pb.URLInfo {
+	var convertedURLS []*pb.URLInfo
+	for _, v := range urls {
+		newURL := pb.URLInfo{
+			Uuid:          v.UUID,
+			UserID:        v.UserID,
+			CorrelationId: v.OriginalURL,
 			OriginalUrl:   v.OriginalURL,
 			ShortUrl:      v.ShortURL,
 			IsDeleted:     v.IsDeleted,
