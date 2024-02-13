@@ -115,14 +115,14 @@ func (s *ShortenerService) ShortenAPI(ctx context.Context, in *pb.ShortenAPIRequ
 		return nil, status.Error(codes.InvalidArgument, "no userID in metadata")
 	}
 
-	originUrl := in.GetUrl()
-	shortURL := hashutil.Encode([]byte(originUrl))
+	originURL := in.GetUrl()
+	shortURL := hashutil.Encode([]byte(originURL))
 
 	shortenedData := api.ShortenedData{
 		UserID:      userID,
 		UUID:        uuid.New().String(),
 		ShortURL:    shortURL,
-		OriginalURL: originUrl,
+		OriginalURL: originURL,
 		IsDeleted:   false,
 	}
 
