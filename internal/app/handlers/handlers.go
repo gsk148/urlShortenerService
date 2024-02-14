@@ -309,7 +309,7 @@ func (h *Handler) GetStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isTrusted, err := h.checkIPisTrusted(realIP)
+	isTrusted, err := h.checkIPIsTrusted(realIP)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -335,7 +335,7 @@ func (h *Handler) GetStats(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
-func (h *Handler) checkIPisTrusted(clientIP string) (bool, error) {
+func (h *Handler) checkIPIsTrusted(clientIP string) (bool, error) {
 	_, trustedIP, err := net.ParseCIDR(h.TrustedSubnet)
 	if err != nil {
 		return false, err

@@ -400,3 +400,49 @@ func TestFindUserURLS(t *testing.T) {
 		})
 	}
 }
+
+func TestGetStats(t *testing.T) {
+	type want struct {
+		code        int
+		response    string
+		contentType string
+	}
+
+	tests := []struct {
+		name          string
+		requestMethod string
+		requestPath   string
+		want          want
+	}{
+		{
+			name:          "fail get stats test",
+			requestMethod: http.MethodGet,
+			requestPath:   "/api/internal/stats",
+			want: want{
+				code:        403,
+				contentType: "",
+			},
+		},
+	}
+
+	myLog := logger.NewLogger()
+	h := &Handler{
+		BaseURL:       "http://localhost:8080",
+		TrustedSubnet: "",
+		Store:         storage.NewInMemoryStorage(),
+		Logger:        *myLog,
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(test.requestMethod, test.requestPath, nil)
+			w := httptest.NewRecorder()
+			h.GetStats(w, request)
+
+			res := w.Result()
+			assert.Equal(t, test.want.code, res.StatusCode)
+			assert.Equal(t, test.want.contentType, res.Header.Get("content-type"))
+			defer res.Body.Close()
+		})
+	}
+}
