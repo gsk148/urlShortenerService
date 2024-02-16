@@ -4,16 +4,21 @@ package main
 import (
 	"context"
 	"fmt"
+	"go.uber.org/zap"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"google.golang.org/grpc"
+
 	"github.com/gsk148/urlShorteningService/internal/app/config"
 	"github.com/gsk148/urlShorteningService/internal/app/handlers"
 	"github.com/gsk148/urlShorteningService/internal/app/logger"
+	pb "github.com/gsk148/urlShorteningService/internal/app/proto"
 	"github.com/gsk148/urlShorteningService/internal/app/storage"
 )
 
@@ -23,7 +28,7 @@ var (
 	buildCommit  = "N/A"
 )
 
-func runSrv() (*http.Server, error) {
+func runRESTSrv() (*http.Server, error) {
 	cfg := config.Load()
 
 	myLog := logger.NewLogger()
@@ -52,12 +57,43 @@ func runSrv() (*http.Server, error) {
 	return srv, http.ListenAndServe(cfg.ServerAddr, router)
 }
 
+type ShortenerService struct {
+	pb.UnimplementedShortenerServiceServer
+	strg storage.Storage
+	log  zap.SugaredLogger
+}
+
+func runGRPCServer() {
+	cfg := config.Load()
+	log := logger.NewLogger()
+	myLog := logger.NewLogger()
+	store, err := storage.NewStorage(*cfg, *myLog)
+	if err != nil {
+		log.Fatal(err)
+	}
+	st := store
+	listen, err := net.Listen("tcp", ":3200")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s := grpc.NewServer()
+	pb.RegisterShortenerServiceServer(
+		s, &ShortenerService{
+			strg:                                st,
+			UnimplementedShortenerServiceServer: pb.UnimplementedShortenerServiceServer{},
+		})
+	if err = s.Serve(listen); err != nil {
+		log.Fatal(err)
+	}
+}
+
 func main() {
 	fmt.Println("Build version:", buildVersion)
 	fmt.Println("Build date:", buildDate)
 	fmt.Println("Build commit:", buildCommit)
 
-	srv, err := runSrv()
+	srv, err := runRESTSrv()
 	if err != nil {
 		log.Fatalf("Failed to create HTTP server: %v", err)
 	}
@@ -80,4 +116,6 @@ func main() {
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Printf("HTTP server Shutdown error: %v", err)
 	}
+
+	runGRPCServer()
 }

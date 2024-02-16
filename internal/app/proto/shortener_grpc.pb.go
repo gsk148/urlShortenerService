@@ -324,7 +324,7 @@ func _ShortenerService_Shorten_Handler(srv interface{}, ctx context.Context, dec
 }
 
 // ShortenerService_ServiceDesc is the grpc.ServiceDesc for ShortenerService service.
-// It's only intended for direct use with grpc.RegisterService,
+// It's only intended for direct use with grpchandlers.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ShortenerService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "proto.ShortenerService",
