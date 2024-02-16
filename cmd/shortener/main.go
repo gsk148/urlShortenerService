@@ -6,16 +6,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-
-	"github.com/gsk148/urlShorteningService/internal/app/compress"
 	"github.com/gsk148/urlShorteningService/internal/app/config"
 	"github.com/gsk148/urlShorteningService/internal/app/handlers"
 	"github.com/gsk148/urlShorteningService/internal/app/logger"
@@ -37,63 +32,24 @@ func runSrv() (*http.Server, error) {
 		log.Fatal(err)
 	}
 
-	h := &handlers.Handler{
+	handler := &handlers.Handler{
 		BaseURL:       cfg.BaseURL,
 		TrustedSubnet: cfg.TrustedSubnet,
 		Store:         store,
 		Logger:        *myLog,
 	}
 
-	r := chi.NewRouter()
-
-	r.Use(middleware.Compress(5,
-		"application/javascript",
-		"application/json",
-		"text/css",
-		"text/html",
-		"text/plain",
-		"text/xml"))
-	r.Use(compress.Middleware)
-	r.Use(logger.WithLogging)
-
-	r.Group(func(r chi.Router) {
-		r.Use(middleware.AllowContentType("application/json"))
-		r.Post("/api/shorten", h.ShortenAPI)
-		r.Post("/api/shorten/batch", h.BatchShortenAPI)
-		r.Get("/api/user/urls", h.FindUserURLS)
-		r.Delete("/api/user/urls", h.DeleteURLs)
-	})
-
-	r.Post("/", h.Shorten)
-	r.Get("/{id}", h.FindByShortLink)
-	r.Get("/ping", h.Ping)
-	r.Get("/api/internal/stats", h.GetStats)
-
-	r.HandleFunc("/debug/pprof", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, r.URL.Path[1:])
-	})
-	r.HandleFunc("/debug/pprof/*", pprof.Index)
-	r.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	r.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
-
-	r.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
-	r.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
-	r.Handle("/debug/pprof/mutex", pprof.Handler("mutex"))
-	r.Handle("/debug/pprof/heap", pprof.Handler("heap"))
-	r.Handle("/debug/pprof/block", pprof.Handler("block"))
-	r.Handle("/debug/pprof/allocs", pprof.Handler("allocs"))
+	router := handler.InitRoutes()
 
 	srv := &http.Server{
 		Addr:    cfg.ServerAddr,
-		Handler: r,
+		Handler: router,
 	}
 
 	if cfg.EnableHTTPS {
-		return srv, http.ListenAndServeTLS(cfg.ServerAddr, "internal/app/cert/server.crt", "internal/app/cert/server.key", r)
+		return srv, http.ListenAndServeTLS(cfg.ServerAddr, "internal/app/cert/server.crt", "internal/app/cert/server.key", router)
 	}
-	return srv, http.ListenAndServe(cfg.ServerAddr, r)
+	return srv, http.ListenAndServe(cfg.ServerAddr, router)
 }
 
 func main() {
