@@ -3,16 +3,41 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/gsk148/urlShorteningService/internal/app/api"
 	"github.com/gsk148/urlShorteningService/internal/app/logger"
 	"github.com/gsk148/urlShorteningService/internal/app/storage"
 )
+
+func getTestHandler(store storage.Storage) *Handler {
+	myLog := logger.NewLogger()
+	handler := &Handler{
+		BaseURL:       "http://localhost:8080",
+		TrustedSubnet: "127.0.0.1/24",
+		Store:         store,
+		Logger:        *myLog,
+	}
+
+	return handler
+}
+
+func TestInitRoutes(t *testing.T) {
+	t.Run("success generate routes", func(t *testing.T) {
+
+		handler := getTestHandler(storage.NewInMemoryStorage())
+		routes := handler.InitRoutes()
+
+		assert.NotNil(t, routes)
+	})
+}
 
 func TestCreateShortLinkHandler(t *testing.T) {
 	type want struct {
@@ -25,12 +50,14 @@ func TestCreateShortLinkHandler(t *testing.T) {
 		name          string
 		requestMethod string
 		requestPath   string
+		requestData   string
 		want          want
 	}{
 		{
 			name:          "create short link success test",
 			requestMethod: http.MethodPost,
 			requestPath:   "/",
+			requestData:   "https://practicum.yandex.ru/",
 			want: want{
 				code:        201,
 				contentType: "text/plain",
@@ -40,6 +67,17 @@ func TestCreateShortLinkHandler(t *testing.T) {
 			name:          "create short link not valid method",
 			requestMethod: http.MethodGet,
 			requestPath:   "/",
+			requestData:   "https://sports.ru/",
+			want: want{
+				code:        400,
+				contentType: "text/plain; charset=utf-8",
+			},
+		},
+		{
+			name:          "create short link not valid data",
+			requestMethod: http.MethodPost,
+			requestPath:   "/",
+			requestData:   "",
 			want: want{
 				code:        400,
 				contentType: "text/plain; charset=utf-8",
@@ -47,17 +85,11 @@ func TestCreateShortLinkHandler(t *testing.T) {
 		},
 	}
 
-	myLog := logger.NewLogger()
-	h := &Handler{
-		BaseURL:       "http://localhost:8080",
-		TrustedSubnet: "",
-		Store:         storage.NewInMemoryStorage(),
-		Logger:        *myLog,
-	}
+	h := getTestHandler(storage.NewInMemoryStorage())
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(test.requestMethod, test.requestPath, strings.NewReader("https://practicum.yandex.ru/"))
+			request := httptest.NewRequest(test.requestMethod, test.requestPath, strings.NewReader(test.requestData))
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
 			h.Shorten(w, request)
@@ -68,6 +100,31 @@ func TestCreateShortLinkHandler(t *testing.T) {
 			defer res.Body.Close()
 		})
 	}
+}
+
+func TestFailCreateShortLink(t *testing.T) {
+	t.Run("Create short link", func(t *testing.T) {
+		t.Run("fail add to store", func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			dbMock := storage.NewMockStorage(ctrl)
+
+			data := api.ShortenedData{}
+			dbMock.EXPECT().Store(gomock.Any()).Return(data, new(storage.ErrURLExists))
+
+			handler := getTestHandler(dbMock)
+
+			request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("https://practicum.yandex.ru/"))
+
+			w := httptest.NewRecorder()
+			handler.Shorten(w, request)
+
+			res := w.Result()
+			assert.Equal(t, http.StatusConflict, w.Code)
+			defer res.Body.Close()
+		})
+	})
 }
 
 func TestFindByShortLinkHandler(t *testing.T) {
@@ -103,20 +160,14 @@ func TestFindByShortLinkHandler(t *testing.T) {
 		},
 	}
 
-	myLog := logger.NewLogger()
-	h := &Handler{
-		BaseURL:       "http://localhost:8080",
-		TrustedSubnet: "",
-		Store:         storage.NewInMemoryStorage(),
-		Logger:        *myLog,
-	}
+	handler := getTestHandler(storage.NewInMemoryStorage())
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			request := httptest.NewRequest(test.requestMethod, test.requestPath, nil)
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
-			h.FindByShortLink(w, request)
+			handler.FindByShortLink(w, request)
 
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
@@ -124,6 +175,29 @@ func TestFindByShortLinkHandler(t *testing.T) {
 			defer res.Body.Close()
 		})
 	}
+}
+
+func TestSuccessFindByShortLink(t *testing.T) {
+	t.Run("success find short link", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		dbMock := storage.NewMockStorage(ctrl)
+		mockedDBResult := api.ShortenedData{
+			OriginalURL: "praktikum.yandex.ru",
+		}
+		dbMock.EXPECT().Get(gomock.Any()).Return(mockedDBResult, nil)
+
+		handler := getTestHandler(dbMock)
+		request := httptest.NewRequest(http.MethodGet, "/ngaCAPJ", nil)
+		// создаём новый Recorder
+		w := httptest.NewRecorder()
+		handler.FindByShortLink(w, request)
+
+		res := w.Result()
+		assert.Equal(t, http.StatusTemporaryRedirect, res.StatusCode)
+		defer res.Body.Close()
+	})
 }
 
 func TestShorterApiHandler(t *testing.T) {
@@ -190,50 +264,46 @@ func TestShorterApiHandler(t *testing.T) {
 }
 
 func TestPingHandler(t *testing.T) {
-	type want struct {
-		code        int
-		response    string
-		contentType string
-	}
+	t.Run("Ping", func(t *testing.T) {
+		t.Run("fail case", func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-	tests := []struct {
-		name          string
-		requestMethod string
-		requestPath   string
-		want          want
-	}{
-		{
-			name:          "success ping test",
-			requestMethod: http.MethodGet,
-			requestPath:   "/ping",
-			want: want{
-				code:        200,
-				contentType: "",
-			},
-		},
-	}
+			dbMock := storage.NewMockStorage(ctrl)
 
-	myLog := logger.NewLogger()
-	h := &Handler{
-		BaseURL:       "http://localhost:8080",
-		TrustedSubnet: "",
-		Store:         storage.NewInMemoryStorage(),
-		Logger:        *myLog,
-	}
+			dbMock.EXPECT().Ping().Return(errors.New("err"))
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(test.requestMethod, test.requestPath, nil)
-			// создаём новый Recorder
+			handler := getTestHandler(dbMock)
+
+			request := httptest.NewRequest(http.MethodGet, "/ping", nil)
+
 			w := httptest.NewRecorder()
-			h.Ping(w, request)
+			handler.Ping(w, request)
 
 			res := w.Result()
-			assert.Equal(t, test.want.code, res.StatusCode)
-			assert.Equal(t, test.want.contentType, res.Header.Get("content-type"))
+			assert.Equal(t, http.StatusInternalServerError, w.Code)
 			defer res.Body.Close()
 		})
-	}
+		t.Run("success case", func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			dbMock := storage.NewMockStorage(ctrl)
+
+			dbMock.EXPECT().Ping().Return(error(nil))
+
+			handler := getTestHandler(dbMock)
+
+			request := httptest.NewRequest(http.MethodGet, "/ping", nil)
+
+			w := httptest.NewRecorder()
+			handler.Ping(w, request)
+
+			res := w.Result()
+			assert.Equal(t, http.StatusOK, w.Code)
+			defer res.Body.Close()
+		})
+	})
 }
 
 func TestDeleteURLs(t *testing.T) {
@@ -272,13 +342,7 @@ func TestDeleteURLs(t *testing.T) {
 		},
 	}
 
-	myLog := logger.NewLogger()
-	h := &Handler{
-		BaseURL:       "http://localhost:8080",
-		TrustedSubnet: "",
-		Store:         storage.NewInMemoryStorage(),
-		Logger:        *myLog,
-	}
+	h := getTestHandler(storage.NewInMemoryStorage())
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -355,94 +419,88 @@ func TestBatchShortenerAPIHandler(t *testing.T) {
 }
 
 func TestFindUserURLS(t *testing.T) {
-	type want struct {
-		code        int
-		response    string
-		contentType string
-	}
-
-	tests := []struct {
-		name          string
-		requestMethod string
-		requestPath   string
-		want          want
-	}{
-		{
-			name:          "fail batch shortner api test",
-			requestMethod: http.MethodGet,
-			requestPath:   "/api/user/urls",
-			want: want{
-				code:        200,
-				contentType: "application/json",
-			},
-		},
-	}
-
-	myLog := logger.NewLogger()
-	h := &Handler{
-		BaseURL:       "http://localhost:8080",
-		TrustedSubnet: "",
-		Store:         storage.NewInMemoryStorage(),
-		Logger:        *myLog,
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(test.requestMethod, test.requestPath, nil)
+	t.Run("get user's urls", func(t *testing.T) {
+		t.Run("success", func(t *testing.T) {
+			h := getTestHandler(storage.NewInMemoryStorage())
+			request := httptest.NewRequest(http.MethodGet, "/api/user/urls", nil)
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
 			h.FindUserURLS(w, request)
 
 			res := w.Result()
-			assert.Equal(t, test.want.code, res.StatusCode)
-			assert.Equal(t, test.want.contentType, res.Header.Get("content-type"))
+			assert.Equal(t, http.StatusOK, res.StatusCode)
 			defer res.Body.Close()
 		})
-	}
+	})
+
+	t.Run("success get user's urls", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		dbMock := storage.NewMockStorage(ctrl)
+
+		dbMock.EXPECT().GetBatchByUserID(gomock.Any()).Return(nil, errors.New("error"))
+
+		h := getTestHandler(dbMock)
+		request := httptest.NewRequest(http.MethodGet, "/api/user/urls", nil)
+		// создаём новый Recorder
+		w := httptest.NewRecorder()
+		h.FindUserURLS(w, request)
+
+		res := w.Result()
+		assert.Equal(t, http.StatusNoContent, res.StatusCode)
+		defer res.Body.Close()
+	})
 }
 
 func TestGetStats(t *testing.T) {
-	type want struct {
-		code        int
-		response    string
-		contentType string
-	}
+	t.Run("forbidden get stats", func(t *testing.T) {
+		h := getTestHandler(storage.NewInMemoryStorage())
+		request := httptest.NewRequest(http.MethodGet, "/api/internal/stats", nil)
+		w := httptest.NewRecorder()
+		h.GetStats(w, request)
 
-	tests := []struct {
-		name          string
-		requestMethod string
-		requestPath   string
-		want          want
-	}{
-		{
-			name:          "fail get stats test",
-			requestMethod: http.MethodGet,
-			requestPath:   "/api/internal/stats",
-			want: want{
-				code:        403,
-				contentType: "",
-			},
-		},
-	}
+		res := w.Result()
+		assert.Equal(t, http.StatusForbidden, res.StatusCode)
+		defer res.Body.Close()
+	})
 
-	myLog := logger.NewLogger()
-	h := &Handler{
-		BaseURL:       "http://localhost:8080",
-		TrustedSubnet: "",
-		Store:         storage.NewInMemoryStorage(),
-		Logger:        *myLog,
-	}
+	t.Run("fail get stats", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(test.requestMethod, test.requestPath, nil)
-			w := httptest.NewRecorder()
-			h.GetStats(w, request)
+		dbMock := storage.NewMockStorage(ctrl)
 
-			res := w.Result()
-			assert.Equal(t, test.want.code, res.StatusCode)
-			assert.Equal(t, test.want.contentType, res.Header.Get("content-type"))
-			defer res.Body.Close()
-		})
-	}
+		dbMock.EXPECT().GetStatistic().Return(nil).AnyTimes()
+
+		h := getTestHandler(dbMock)
+		request := httptest.NewRequest(http.MethodGet, "/api/internal/stats", nil)
+		request.Header.Set("X-Real-IP", "127.0.0.1")
+		w := httptest.NewRecorder()
+		h.GetStats(w, request)
+
+		res := w.Result()
+		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
+		defer res.Body.Close()
+	})
+
+	t.Run("success get stats", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		dbMock := storage.NewMockStorage(ctrl)
+
+		stats := &api.Statistic{}
+		dbMock.EXPECT().GetStatistic().Return(stats).AnyTimes()
+
+		h := getTestHandler(dbMock)
+		request := httptest.NewRequest(http.MethodGet, "/api/internal/stats", nil)
+		request.Header.Set("X-Real-IP", "127.0.0.1")
+		w := httptest.NewRecorder()
+		h.GetStats(w, request)
+
+		res := w.Result()
+		assert.Equal(t, http.StatusOK, res.StatusCode)
+		defer res.Body.Close()
+	})
 }

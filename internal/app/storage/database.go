@@ -170,7 +170,7 @@ func (s *DBStorage) DeleteByUserIDAndShort(userID string, short string) error {
 // GetStatistic - return num of saved urls and users
 func (s *DBStorage) GetStatistic() *api.Statistic {
 	var st api.Statistic
-	query := "SELECT count(DISTINCT userID), count(*) FROM shortener"
+	query := "SELECT count(DISTINCT user_id), count(*) FROM shortener"
 	res := s.DB.QueryRow(query)
 	err := res.Scan(&st.Users, &st.URLs)
 	if err != nil {

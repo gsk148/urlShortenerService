@@ -22,6 +22,7 @@ require (
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/gostaticanalysis/analysisutil v0.6.1 // indirect
 	github.com/gostaticanalysis/comment v1.4.2 // indirect
