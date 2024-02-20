@@ -28,15 +28,7 @@ var (
 	buildCommit  = "N/A"
 )
 
-func runRESTSrv() (*http.Server, error) {
-	cfg := config.Load()
-
-	myLog := logger.NewLogger()
-	store, err := storage.NewStorage(*cfg, *myLog)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func runRESTSrv(cfg *config.Config, myLog *zap.SugaredLogger, store storage.Storage) (*http.Server, error) {
 	handler := &handlers.Handler{
 		BaseURL:       cfg.BaseURL,
 		TrustedSubnet: cfg.TrustedSubnet,
@@ -63,15 +55,7 @@ type ShortenerService struct {
 	log  zap.SugaredLogger
 }
 
-func runGRPCServer() {
-	cfg := config.Load()
-	log := logger.NewLogger()
-	myLog := logger.NewLogger()
-	store, err := storage.NewStorage(*cfg, *myLog)
-	if err != nil {
-		log.Fatal(err)
-	}
-	st := store
+func runGRPCServer(store storage.Storage) {
 	listen, err := net.Listen("tcp", ":3200")
 	if err != nil {
 		log.Fatal(err)
@@ -80,7 +64,7 @@ func runGRPCServer() {
 	s := grpc.NewServer()
 	pb.RegisterShortenerServiceServer(
 		s, &ShortenerService{
-			strg:                                st,
+			strg:                                store,
 			UnimplementedShortenerServiceServer: pb.UnimplementedShortenerServiceServer{},
 		})
 	if err = s.Serve(listen); err != nil {
@@ -93,7 +77,16 @@ func main() {
 	fmt.Println("Build date:", buildDate)
 	fmt.Println("Build commit:", buildCommit)
 
-	srv, err := runRESTSrv()
+	cfg := config.Load()
+
+	myLog := logger.NewLogger()
+	store, err := storage.NewStorage(*cfg, *myLog)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	srv, err := runRESTSrv(cfg, myLog, store)
+
 	if err != nil {
 		log.Fatalf("Failed to create HTTP server: %v", err)
 	}
@@ -117,5 +110,5 @@ func main() {
 		log.Printf("HTTP server Shutdown error: %v", err)
 	}
 
-	runGRPCServer()
+	runGRPCServer(store)
 }
