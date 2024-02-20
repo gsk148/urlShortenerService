@@ -165,7 +165,6 @@ func TestFindByShortLinkHandler(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			request := httptest.NewRequest(test.requestMethod, test.requestPath, nil)
-			// создаём новый Recorder
 			w := httptest.NewRecorder()
 			handler.FindByShortLink(w, request)
 
@@ -177,26 +176,48 @@ func TestFindByShortLinkHandler(t *testing.T) {
 	}
 }
 
-func TestSuccessFindByShortLink(t *testing.T) {
-	t.Run("success find short link", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
+func TestDeletedFindByShortLink(t *testing.T) {
+	t.Run("DeletedFindByShortLink", func(t *testing.T) {
+		t.Run("success find active short link", func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-		dbMock := storage.NewMockStorage(ctrl)
-		mockedDBResult := api.ShortenedData{
-			OriginalURL: "praktikum.yandex.ru",
-		}
-		dbMock.EXPECT().Get(gomock.Any()).Return(mockedDBResult, nil)
+			dbMock := storage.NewMockStorage(ctrl)
+			mockedDBResult := api.ShortenedData{
+				OriginalURL: "praktikum.yandex.ru",
+				IsDeleted:   false,
+			}
+			dbMock.EXPECT().Get(gomock.Any()).Return(mockedDBResult, nil)
 
-		handler := getTestHandler(dbMock)
-		request := httptest.NewRequest(http.MethodGet, "/ngaCAPJ", nil)
-		// создаём новый Recorder
-		w := httptest.NewRecorder()
-		handler.FindByShortLink(w, request)
+			handler := getTestHandler(dbMock)
+			request := httptest.NewRequest(http.MethodGet, "/ngaCAPJ", nil)
+			w := httptest.NewRecorder()
+			handler.FindByShortLink(w, request)
 
-		res := w.Result()
-		assert.Equal(t, http.StatusTemporaryRedirect, res.StatusCode)
-		defer res.Body.Close()
+			res := w.Result()
+			assert.Equal(t, http.StatusTemporaryRedirect, res.StatusCode)
+			defer res.Body.Close()
+		})
+		t.Run("success find deleted short link", func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			dbMock := storage.NewMockStorage(ctrl)
+			mockedDBResult := api.ShortenedData{
+				OriginalURL: "praktikum.yandex.ru",
+				IsDeleted:   true,
+			}
+			dbMock.EXPECT().Get(gomock.Any()).Return(mockedDBResult, nil)
+
+			handler := getTestHandler(dbMock)
+			request := httptest.NewRequest(http.MethodGet, "/ngaCAPJ", nil)
+			w := httptest.NewRecorder()
+			handler.FindByShortLink(w, request)
+
+			res := w.Result()
+			assert.Equal(t, http.StatusGone, res.StatusCode)
+			defer res.Body.Close()
+		})
 	})
 }
 
@@ -216,7 +237,7 @@ func TestShorterApiHandler(t *testing.T) {
 		want          want
 	}{
 		{
-			name:          "api short link success test",
+			name:          "success case",
 			requestMethod: http.MethodPost,
 			requestPath:   "/api/shorten",
 			contentType:   "application/json",
@@ -227,7 +248,7 @@ func TestShorterApiHandler(t *testing.T) {
 			},
 		},
 		{
-			name:          "api short link not valid content-type",
+			name:          "not valid content-type",
 			requestMethod: http.MethodPost,
 			requestPath:   "/api/shorten",
 			contentType:   "text/plain",
@@ -237,23 +258,27 @@ func TestShorterApiHandler(t *testing.T) {
 				contentType: "text/plain; charset=utf-8",
 			},
 		},
+		{
+			name:          "not valid content",
+			requestMethod: http.MethodPost,
+			requestPath:   "/api/shorten",
+			contentType:   "text/plain",
+			body:          map[string]string{},
+			want: want{
+				code:        400,
+				contentType: "text/plain; charset=utf-8",
+			},
+		},
 	}
 
-	myLog := logger.NewLogger()
-	h := &Handler{
-		BaseURL:       "http://localhost:8080",
-		TrustedSubnet: "",
-		Store:         storage.NewInMemoryStorage(),
-		Logger:        *myLog,
-	}
-
+	handler := getTestHandler(storage.NewInMemoryStorage())
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			body, _ := json.Marshal(test.body)
 			request := httptest.NewRequest(test.requestMethod, test.requestPath, bytes.NewBuffer(body))
 			request.Header.Set("Content-Type", test.contentType)
 			w := httptest.NewRecorder()
-			h.ShortenAPI(w, request)
+			handler.ShortenAPI(w, request)
 
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
@@ -263,6 +288,31 @@ func TestShorterApiHandler(t *testing.T) {
 	}
 }
 
+func TestFailCreateShortLinkApi(t *testing.T) {
+	t.Run("fail add to store by api", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		dbMock := storage.NewMockStorage(ctrl)
+
+		data := api.ShortenedData{}
+		dbMock.EXPECT().Store(gomock.Any()).Return(data, new(storage.ErrURLExists))
+
+		handler := getTestHandler(dbMock)
+
+		body, _ := json.Marshal(map[string]string{"url": "https://practicum.yandex.ru"})
+		request := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewBuffer(body))
+		request.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		handler.ShortenAPI(w, request)
+
+		res := w.Result()
+		assert.Equal(t, http.StatusConflict, w.Code)
+		defer res.Body.Close()
+	})
+}
+
 func TestPingHandler(t *testing.T) {
 	t.Run("Ping", func(t *testing.T) {
 		t.Run("fail case", func(t *testing.T) {
@@ -270,9 +320,7 @@ func TestPingHandler(t *testing.T) {
 			defer ctrl.Finish()
 
 			dbMock := storage.NewMockStorage(ctrl)
-
 			dbMock.EXPECT().Ping().Return(errors.New("err"))
-
 			handler := getTestHandler(dbMock)
 
 			request := httptest.NewRequest(http.MethodGet, "/ping", nil)
@@ -289,9 +337,7 @@ func TestPingHandler(t *testing.T) {
 			defer ctrl.Finish()
 
 			dbMock := storage.NewMockStorage(ctrl)
-
 			dbMock.EXPECT().Ping().Return(error(nil))
-
 			handler := getTestHandler(dbMock)
 
 			request := httptest.NewRequest(http.MethodGet, "/ping", nil)
@@ -342,14 +388,14 @@ func TestDeleteURLs(t *testing.T) {
 		},
 	}
 
-	h := getTestHandler(storage.NewInMemoryStorage())
+	handler := getTestHandler(storage.NewInMemoryStorage())
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			request := httptest.NewRequest(test.requestMethod, test.requestPath, strings.NewReader(test.requestBody))
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
-			h.DeleteURLs(w, request)
+			handler.DeleteURLs(w, request)
 
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
@@ -395,20 +441,13 @@ func TestBatchShortenerAPIHandler(t *testing.T) {
 		},
 	}
 
-	myLog := logger.NewLogger()
-	h := &Handler{
-		BaseURL:       "http://localhost:8080",
-		TrustedSubnet: "",
-		Store:         storage.NewInMemoryStorage(),
-		Logger:        *myLog,
-	}
+	handler := getTestHandler(storage.NewInMemoryStorage())
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			request := httptest.NewRequest(test.requestMethod, test.requestPath, strings.NewReader(test.requestBody))
-			// создаём новый Recorder
 			w := httptest.NewRecorder()
-			h.BatchShortenAPI(w, request)
+			handler.BatchShortenAPI(w, request)
 
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
@@ -441,11 +480,10 @@ func TestFindUserURLS(t *testing.T) {
 
 		dbMock.EXPECT().GetBatchByUserID(gomock.Any()).Return(nil, errors.New("error"))
 
-		h := getTestHandler(dbMock)
+		handler := getTestHandler(dbMock)
 		request := httptest.NewRequest(http.MethodGet, "/api/user/urls", nil)
-		// создаём новый Recorder
 		w := httptest.NewRecorder()
-		h.FindUserURLS(w, request)
+		handler.FindUserURLS(w, request)
 
 		res := w.Result()
 		assert.Equal(t, http.StatusNoContent, res.StatusCode)
@@ -455,10 +493,10 @@ func TestFindUserURLS(t *testing.T) {
 
 func TestGetStats(t *testing.T) {
 	t.Run("forbidden get stats", func(t *testing.T) {
-		h := getTestHandler(storage.NewInMemoryStorage())
+		handler := getTestHandler(storage.NewInMemoryStorage())
 		request := httptest.NewRequest(http.MethodGet, "/api/internal/stats", nil)
 		w := httptest.NewRecorder()
-		h.GetStats(w, request)
+		handler.GetStats(w, request)
 
 		res := w.Result()
 		assert.Equal(t, http.StatusForbidden, res.StatusCode)
@@ -493,11 +531,11 @@ func TestGetStats(t *testing.T) {
 		stats := &api.Statistic{}
 		dbMock.EXPECT().GetStatistic().Return(stats).AnyTimes()
 
-		h := getTestHandler(dbMock)
+		handler := getTestHandler(dbMock)
 		request := httptest.NewRequest(http.MethodGet, "/api/internal/stats", nil)
 		request.Header.Set("X-Real-IP", "127.0.0.1")
 		w := httptest.NewRecorder()
-		h.GetStats(w, request)
+		handler.GetStats(w, request)
 
 		res := w.Result()
 		assert.Equal(t, http.StatusOK, res.StatusCode)
