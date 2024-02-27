@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+
+	"github.com/gsk148/urlShorteningService/internal/app/api"
 )
 
 // FileStorage structure of FileStorage
@@ -41,7 +43,7 @@ func readFromFile(fs FileStorage) error {
 	for scanner.Scan() {
 		line := scanner.Bytes()
 
-		var sd ShortenedData
+		var sd api.ShortenedData
 		if err := json.Unmarshal(line, &sd); err != nil {
 			return err
 		}
@@ -59,17 +61,17 @@ func readFromFile(fs FileStorage) error {
 }
 
 // Store data and return error if already exists and short url if not
-func (s *FileStorage) Store(data ShortenedData) (ShortenedData, error) {
+func (s *FileStorage) Store(data api.ShortenedData) (api.ShortenedData, error) {
 	s.inMemoryData.data[data.ShortURL] = data
 	err := s.Save()
-	return ShortenedData{}, err
+	return api.ShortenedData{}, err
 }
 
 // Get returns full url by short url
-func (s *FileStorage) Get(key string) (ShortenedData, error) {
+func (s *FileStorage) Get(key string) (api.ShortenedData, error) {
 	data, exists := s.inMemoryData.data[key]
 	if !exists {
-		return ShortenedData{}, errors.New("key not found: " + key)
+		return api.ShortenedData{}, errors.New("key not found: " + key)
 	}
 	return data, nil
 }
@@ -111,9 +113,9 @@ func (s *FileStorage) Close() error {
 }
 
 // GetBatchByUserID returns batches of short urls by provided userID
-func (s *FileStorage) GetBatchByUserID(userID string) ([]ShortenedData, error) {
-	var data []ShortenedData
-	data = append(data, ShortenedData{})
+func (s *FileStorage) GetBatchByUserID(userID string) ([]api.ShortenedData, error) {
+	var data []api.ShortenedData
+	data = append(data, api.ShortenedData{})
 
 	return data, nil
 }
@@ -121,4 +123,9 @@ func (s *FileStorage) GetBatchByUserID(userID string) ([]ShortenedData, error) {
 // DeleteByUserIDAndShort return error
 func (s *FileStorage) DeleteByUserIDAndShort(userID string, shortURL string) error {
 	return errors.New("Error")
+}
+
+// GetStatistic - returns num of saved urls and users
+func (s *FileStorage) GetStatistic() *api.Statistic {
+	return nil
 }

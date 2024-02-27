@@ -15,6 +15,7 @@ type Config struct {
 	EnableHTTPS     bool   `json:"enable_https" env:"ENABLE_HTTPS" envDefault:"false"`
 	StorageType     string
 	Config          string `env:"CONFIG"`
+	TrustedSubnet   string `json:"trusted_subnet" env:"TRUSTED_SUBNET"`
 }
 
 // Load gets env vars from arguments or environment
@@ -27,6 +28,7 @@ func Load() *Config {
 	flag.StringVar(&cfg.DatabaseDSN, "d", "", "Database host")
 	flag.BoolVar(&cfg.EnableHTTPS, "s", cfg.EnableHTTPS, "Enable HTTPS server mode")
 	flag.StringVar(&cfg.Config, "c", "", "JSON config file")
+	flag.StringVar(&cfg.TrustedSubnet, "t", cfg.TrustedSubnet, "Enable trusted service subnet")
 	flag.Parse()
 
 	if envRunAddr := os.Getenv("SERVER_ADDRESS"); envRunAddr != "" {
@@ -76,6 +78,10 @@ func Load() *Config {
 	}
 	if !cfg.EnableHTTPS || jsonCfg.EnableHTTPS {
 		cfg.EnableHTTPS = jsonCfg.EnableHTTPS
+	}
+
+	if cfg.TrustedSubnet == "" {
+		cfg.TrustedSubnet = jsonCfg.TrustedSubnet
 	}
 
 	return cfg

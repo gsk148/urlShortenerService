@@ -5,28 +5,79 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
 	"net/http"
+	"net/http/pprof"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/gsk148/urlShorteningService/internal/app/api"
 	"github.com/gsk148/urlShorteningService/internal/app/auth"
+	"github.com/gsk148/urlShorteningService/internal/app/compress"
 	"github.com/gsk148/urlShorteningService/internal/app/hashutil"
+	"github.com/gsk148/urlShorteningService/internal/app/logger"
 	"github.com/gsk148/urlShorteningService/internal/app/storage"
 )
 
 // Handler structure of Handler
 type Handler struct {
-	BaseURL string
-	Store   storage.Storage
-	Logger  zap.SugaredLogger
+	BaseURL       string
+	TrustedSubnet string
+	Store         storage.Storage
+	Logger        zap.SugaredLogger
 }
 
-// ShortenerHandler save provided in text/plain format full url and returns short
-func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) InitRoutes() *chi.Mux {
+	r := chi.NewRouter()
+
+	r.Use(middleware.Compress(5,
+		"application/javascript",
+		"application/json",
+		"text/css",
+		"text/html",
+		"text/plain",
+		"text/xml"))
+	r.Use(compress.Middleware)
+	r.Use(logger.WithLogging)
+
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.AllowContentType("application/json"))
+		r.Post("/api/shorten", h.ShortenAPI)
+		r.Post("/api/shorten/batch", h.BatchShortenAPI)
+		r.Get("/api/user/urls", h.FindUserURLS)
+		r.Delete("/api/user/urls", h.DeleteURLs)
+	})
+
+	r.Post("/", h.Shorten)
+	r.Get("/{id}", h.FindByShortLink)
+	r.Get("/ping", h.Ping)
+	r.Get("/api/internal/stats", h.GetStats)
+
+	r.HandleFunc("/debug/pprof", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, r.URL.Path[1:])
+	})
+	r.HandleFunc("/debug/pprof/*", pprof.Index)
+	r.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	r.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
+	r.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
+	r.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
+	r.Handle("/debug/pprof/mutex", pprof.Handler("mutex"))
+	r.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+	r.Handle("/debug/pprof/block", pprof.Handler("block"))
+	r.Handle("/debug/pprof/allocs", pprof.Handler("allocs"))
+
+	return r
+}
+
+// Shorten save provided in text/plain format full url and returns short
+func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Not supported", http.StatusBadRequest)
 		return
@@ -50,7 +101,7 @@ func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	storedData, err := h.Store.Store(storage.ShortenedData{
+	storedData, err := h.Store.Store(api.ShortenedData{
 		UserID:      userID,
 		UUID:        uuid.New().String(),
 		ShortURL:    encoded,
@@ -79,8 +130,8 @@ func (h *Handler) ShortenerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// FindByShortLinkHandler returns full url by provided id
-func (h *Handler) FindByShortLinkHandler(w http.ResponseWriter, r *http.Request) {
+// FindByShortLink returns full url by provided id
+func (h *Handler) FindByShortLink(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Not supported", http.StatusBadRequest)
 		return
@@ -101,8 +152,8 @@ func (h *Handler) FindByShortLinkHandler(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-// ShortenerAPIHandler save provided in json format full url and returns short
-func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
+// ShortenAPI save provided in json format full url and returns short
+func (h *Handler) ShortenAPI(w http.ResponseWriter, r *http.Request) {
 	if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		http.Error(w, "Not valid content type", http.StatusBadRequest)
 	}
@@ -134,7 +185,7 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	}
 
-	_, err = h.Store.Store(storage.ShortenedData{
+	_, err = h.Store.Store(api.ShortenedData{
 		UserID:      userID,
 		UUID:        uuid.New().String(),
 		ShortURL:    encoded,
@@ -164,8 +215,8 @@ func (h *Handler) ShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// PingHandler makes test connection to storage
-func (h *Handler) PingHandler(res http.ResponseWriter, req *http.Request) {
+// Ping makes test connection to storage
+func (h *Handler) Ping(res http.ResponseWriter, req *http.Request) {
 	if err := h.Store.Ping(); err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
 		return
@@ -173,8 +224,8 @@ func (h *Handler) PingHandler(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusOK)
 }
 
-// BatchShortenerAPIHandler saves array of provided urls
-func (h *Handler) BatchShortenerAPIHandler(w http.ResponseWriter, r *http.Request) {
+// BatchShortenAPI saves array of provided urls
+func (h *Handler) BatchShortenAPI(w http.ResponseWriter, r *http.Request) {
 	var reqItems []api.BatchShortenRequestItem
 	err := json.NewDecoder(r.Body).Decode(&reqItems)
 	if err != nil {
@@ -192,7 +243,7 @@ func (h *Handler) BatchShortenerAPIHandler(w http.ResponseWriter, r *http.Reques
 	for _, reqItem := range reqItems {
 		shortURL := hashutil.Encode([]byte(reqItem.OriginalURL))
 
-		_, err := h.Store.Store(storage.ShortenedData{
+		_, err := h.Store.Store(api.ShortenedData{
 			UserID:      userID,
 			UUID:        uuid.New().String(),
 			ShortURL:    shortURL,
@@ -297,6 +348,57 @@ func (h *Handler) MarkAsDeleted(inputShort chan string, userID string) {
 			h.Logger.Warnf("Failed to mark deleted by short %s", v)
 		}
 	}
+}
+
+// GetStats returns count of urls and users
+func (h *Handler) GetStats(w http.ResponseWriter, r *http.Request) {
+	realIP := r.Header.Get("X-Real-IP")
+	if realIP == "" {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	isTrusted, err := h.checkIPIsTrusted(realIP)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if !isTrusted {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	stat := h.Store.GetStatistic()
+	if stat == nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	resp, err := json.Marshal(stat)
+	if err != nil {
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(resp)
+}
+
+func (h *Handler) checkIPIsTrusted(clientIP string) (bool, error) {
+	_, trustedIP, err := net.ParseCIDR(h.TrustedSubnet)
+	if err != nil {
+		return false, err
+	}
+
+	parsedIP := net.ParseIP(clientIP)
+	if parsedIP == nil {
+		return false, err
+	}
+
+	if !trustedIP.Contains(parsedIP) {
+		return false, nil
+	}
+	return true, nil
 }
 
 func addShortURLs(input []string) chan string {
